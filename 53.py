@@ -56,9 +56,6 @@ st.image(image, use_column_width=True)
 # In[22]:
 
 
-from PIL import Image
-image_hospital = Image.open('hospital.jpg')
-
 
 # In[23]:
 
