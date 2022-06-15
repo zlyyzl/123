@@ -17,7 +17,7 @@ from pycaret.classification import load_model, predict_model
 # In[2]:
 
 
-model = load_model('tuned_rf9')
+model = load_model('tuned_rf9z')
 
 # In[3]:
 
@@ -114,8 +114,8 @@ if add_selectbox == 'Online_number':
 
         
       if st.button('Predict'): 
-            output = predict(model, features_df) 
-      st.write(' Based on feature values, your functional outcome is '+ str(output))
+            output = model.predict_proba(features_df)[:,1]
+      st.write(' Based on feature values, predicted possibility of good functional outcome is '+ str(output))
 
 
 # In[16]:
@@ -129,7 +129,7 @@ if add_selectbox == 'Batch':
         
         if file_upload is not None:
             data = pd.read_csv(file_upload,sep=',',error_bad_lines=False)                       
-            predictions = predict(model,data) 
+            predictions = model.predict_proba(data)[:,1] 
             predictions = pd.DataFrame(predictions,columns = ['Predictions'])
             st.write(predictions)
 
@@ -188,8 +188,8 @@ if add_selectbox == 'Online_slide':
       features_df = pd.DataFrame([features])
         
       if st.button('Predict'): 
-           output = predict(model=model, input_df=features_df) 
-      st.write(' Based on feature values, your functional outcome is '+ str(output))
+             output = model.predict_proba(features_df)[:,1]
+      st.write(' Based on feature values, predicted possibility of good functional outcome is '+ str(output))
 
 
 # In[13]:
@@ -197,6 +197,5 @@ if add_selectbox == 'Online_slide':
 
 if __name__ == '__main__':
     run()
-
 
 
