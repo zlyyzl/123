@@ -17,7 +17,7 @@ from pycaret.classification import load_model, predict_model
 # In[2]:
 
 
-model = load_model('tuned_rf9')
+model = load_model('tuned_rf9z')
 
 # In[3]:
 
