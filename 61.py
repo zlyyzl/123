@@ -84,7 +84,7 @@ def run():
 
 add_selectbox = st.sidebar.selectbox(
     "How would you like to predict?",
-    ("Online_number","Batch", "Online_slide"))
+    ("Online_number", "Online_slide"))
 
 
 # In[13]:
@@ -107,7 +107,7 @@ st.image(image, use_column_width=True)
 
 
 if add_selectbox == 'Online_number':
-      st.write('This is a web app to predict 90-day outcome of acute ischaemic stroke patients with mechanical thrombectomy based on several features. please fill in the blanks with corresponding data. After that,click on the Predict button at the bottom to see the prediction of the classifier.     Note: all the required laboratory indices are postoperative indices. If the collateral circulation is good, fill in "1"; otherwise, fill in "0".')
+      st.write('This is a web app to predict 90-day outcome of acute ischaemic stroke patients with mechanical thrombectomy based on several features. please fill in the blanks with corresponding data. After that,click on the Predict button at the bottom to see the prediction of the classifier.     Note: all the required laboratory indices are postoperative indices. AGR indicates albumin-to-globulin ratio. If the collateral circulation is good, fill in "1"; otherwise, fill in "0".')
     
       Age = st.number_input('Age', min_value = 18,max_value = 95 ,value = 73) 
       NIHSS = st.number_input('NIHSS', min_value = 4,max_value = 38,value = 30)
@@ -161,46 +161,12 @@ if add_selectbox == 'Online_number':
 # In[16]:
 
 
-if add_selectbox == 'Batch':
-        st.write('This is a web app to predict 90-day outcome of acute ischaemic stroke patients with mechanical thrombectomy based on several features. Please click on the link to download the form and fill in the corresponding data. After that, click on the Browse files button to upload file for prediciton, you can see the prediction of the classifier at the bottom. This page supports batch prediction of the outcome of multiple patients at one time, and can predict the outcome of patients with missing values. Note: all the required laboratory indices are postoperative indices. If the collateral circulation is good, fill in "1"; otherwise, fill in "0". ')
-        
-        import streamlit as st
-        import openpyxl
-        import base64
-        csv_exporter=openpyxl.Workbook()
-        sheet=csv_exporter.active
-        sheet.cell(row=1,column=1).value='Age'
-        sheet.cell(row=1,column=2).value='NIHSS'
-        sheet.cell(row=1,column=3).value='CRP'
-        sheet.cell(row=1,column=4).value='Albumin'
-        sheet.cell(row=1,column=5).value='AGR'
-        sheet.cell(row=1,column=6).value='Neutrophils'
-        sheet.cell(row=1,column=9).value='Collateral_status'
-        sheet.cell(row=1,column=7).value='Serum_glucose'
-        sheet.cell(row=1,column=8).value='eGFR'
-        csv_exporter.save('for predictions.csv')#注意！文件此时保存在内存中且为字节格式文件
-        data=open('for predictions.csv','rb').read()#以只读模式读取且读取为二进制文件
-        b64 = base64.b64encode(data).decode('UTF-8')#解码并加密为base64
-        href = f'<a href="data:file/data;base64,{b64}" download="myresults.csv">Download csv file</a>'#定义下载链接，默认的下载文件名是myresults.xlsx
-        st.markdown(href, unsafe_allow_html=True)#输出到浏览器
-        csv_exporter.close()
-
-        error_bad_lines=False
-        file_upload = st.file_uploader("Upload csv file for predictions", type=["csv"])
-        
-        if file_upload is not None:
-            data = pd.read_csv(file_upload,sep=',',error_bad_lines=False)                       
-            predictions = model2.predict_proba(data)[:,1] 
-            predictions = pd.DataFrame(predictions,columns = ['Predictions'])
-            st.write(predictions)
-
-
 # In[27]:
 
 
 if add_selectbox == 'Online_slide':
     
-      st.write('This is a web app to predict 90-day outcome of acute ischaemic stroke patients with mechanical thrombectomy based on several features that you can see in the sidebar. Please adjust the value of each feature. After that, click on the Predict button at the bottom to see the prediction of the classifier. Note: all the required laboratory indices are postoperative indices. If the collateral circulation is good, fill in "1"; otherwise, fill in "0".')
+      st.write('This is a web app to predict 90-day outcome of acute ischaemic stroke patients with mechanical thrombectomy based on several features that you can see in the sidebar. Please adjust the value of each feature. After that, click on the Predict button at the bottom to see the prediction of the classifier. Note: all the required laboratory indices are postoperative indices. AGR indicates albumin-to-globulin ratio. If the collateral circulation is good, fill in "1"; otherwise, fill in "0".')
 
       Age = st.sidebar.slider(label = 'Age', min_value = 18,
                           max_value = 95 ,
