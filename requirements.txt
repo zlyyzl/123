@@ -14,7 +14,7 @@ pip==24.0
 
 sklearn-pandas==2.2.0
 
-numpy==1.19.5
+numpy==1.19.5 --no-cache-dir
 
 scipy==1.2.1
 
