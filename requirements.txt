@@ -8,7 +8,7 @@ streamlit==1.23.1
 
 pycaret==2.3.10
 
-shap==0.44.1
+shap==0.40.0
 
 
 
