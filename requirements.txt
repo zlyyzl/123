@@ -1,12 +1,12 @@
-setuptools==75.1.0
+setuptools==68.0.0
 
-scikit-learn==1.2.2
+scikit-learn=0.23.3
 
 openpyxl==2.5.6
 
 streamlit==1.23.1
 
-pycaret==3.2.0
+pycaret==2.3.10
 
 shap==0.44.1
 
