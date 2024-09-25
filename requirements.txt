@@ -1,16 +1,16 @@
-setuptools==68.0.0
+setuptool
 
-scikit-learn==0.23.2
+scikit-learn
 
-openpyxl==2.5.6
+openpyxl
 
-streamlit==1.23.1
+streamlit
 
-pycaret==2.3.10
+pycaret
 
-shap==0.40.0
+shap
 
-sklearn-pandas==2.2.0
+sklearn-pandas
 
 
 
