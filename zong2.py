@@ -20,6 +20,11 @@ from pycaret.classification import setup, get_logs,create_model, predict_model, 
 
 
 import streamlit.components.v1 as components
+import os
+
+# 获取环境变量
+allow_deprecated = os.getenv("SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL")
+print(f"SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL: {allow_deprecated}")
 
 st.markdown(
     f"""
