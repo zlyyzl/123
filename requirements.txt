@@ -6,6 +6,6 @@ openpyxl==2.5.6
 
 streamlit==1.23.1
 
-pycaret
+pycaret==2.3.10
 
 shap==0.40.0
