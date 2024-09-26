@@ -8,7 +8,7 @@ streamlit==1.23.1
 
 shap
 
-river
+scikit-multiflow
 
 pandas==1.5.3
 
