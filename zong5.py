@@ -14,7 +14,8 @@ from sklearn.preprocessing import OneHotEncoder
 from PIL import Image
 from pycaret import classification
 from pycaret.classification import setup, get_logs,create_model, predict_model, tune_model, save_model,load_model
-from river.ensemble import IncrementalRandomForest
+from skmultiflow.data import SEAGenerator
+from skmultiflow.meta import IncrementalRandomForest
 # In[2]:
 
 
