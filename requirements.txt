@@ -8,6 +8,8 @@ streamlit==1.23.1
 
 shap
 
+river
+
 pandas==1.5.3
 
 joblib==1.4.2
