@@ -1,4 +1,4 @@
-setuptools
+setuptools==68.0.0
 
 scikit-learn==0.23.2
 
@@ -16,4 +16,4 @@ pycaret
 
 numba
 
-numpy
+numpy==1.20.3
