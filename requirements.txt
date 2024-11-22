@@ -1,8 +1,10 @@
 setuptools==75.1.0
 
-scikit-learn==1.4.2
+scikit-learn==0.23.2
 
-streamlit
+openpyxl==2.5.6
+
+streamlit==1.23.1
 
 pandas==2.1.4
 
