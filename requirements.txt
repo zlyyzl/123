@@ -1,19 +1,8 @@
-setuptools==68.0.0
-
+setuptools==75.6.0
+numpy>=1.20.3,<1.21  # 修改为允许其他依赖项
 scikit-learn==0.24.2
+streamlit>=1.23.1,<2  # 您可以使用更高版本
+pandas>=1.5.3
+pyldavis>=3.2.2
+numba>=0.54.1
 
-openpyxl==2.5.6
-
-streamlit==1.23.1
-
-pandas==1.5.3
-
-joblib==1.4.2
-
-pyLDAvis==3.2.2
-
-pycaret
-
-numba==0.54.1
-
-numpy==1.21.6
