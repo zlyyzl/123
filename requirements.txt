@@ -1,9 +1,10 @@
 numpy==1.23.5
 pandas==1.5.3
 numba==0.56.4
-scikit-learn==1.0.2
+scikit-learn==1.4.3  # 更新到 PyCaret 3.3.2 兼容的版本
 streamlit==1.23.1
 pyLDAvis==3.2.2
 pycaret==3.3.2
-joblib==1.2.0  # downgrade joblib to avoid conflict
+joblib==1.2.0  # 保持这个版本以避免 joblib 的其它冲突
 openpyxl==2.5.6
+
