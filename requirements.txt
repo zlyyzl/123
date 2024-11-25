@@ -1,19 +1,11 @@
 setuptools==68.0.0
-
-scikit-learn
-
+scikit-learn==0.23.2  # 适合 PyCaret 版本 2.3.x
 openpyxl==2.5.6
-
 streamlit==1.23.1
-
 pandas==1.5.3
-
 joblib==1.4.2
-
 pyLDAvis==3.2.2
-
-pycaret
-
+pycaret==2.3.9  # 具体的 PyCaret 版本，根据需求选择
 numba==0.54.1
+numpy==1.23.5
 
-numpy==1.20.3
