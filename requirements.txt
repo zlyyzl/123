@@ -1,4 +1,4 @@
-numpy==1.23.5
+numpy
 pandas==1.5.3
 numba==0.56.4
 scikit-learn  # 使用与 sktime 兼容的版本
