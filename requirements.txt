@@ -1,10 +1,19 @@
-numpy
-pandas==1.5.3
-numba==0.56.4
-scikit-learn  # 使用与 sktime 兼容的版本
-streamlit==1.23.1
-pyLDAvis==3.2.2
-pycaret==2.3.10  # 降级到 2.x 版本
-joblib==1.0.1
+setuptools==68.0.0
+
+scikit-learn==0.23.2
+
 openpyxl==2.5.6
-setuptools
+
+streamlit==1.23.1
+
+pandas==1.5.3
+
+joblib==1.4.2
+
+pyLDAvis==3.2.2
+
+pycaret
+
+numba==0.54.1
+
+numpy==1.20.3
