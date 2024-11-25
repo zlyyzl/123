@@ -1,6 +1,6 @@
 setuptools==68.0.0
 
-scikit-learn==0.23.2
+scikit-learn
 
 openpyxl==2.5.6
 
