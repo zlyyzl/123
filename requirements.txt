@@ -1,7 +1,7 @@
-numpy>=1.23.2  # Ensure NumPy is compatible
+numpy==1.23.5  # 最接近的稳定版本
 pandas==1.5.3
-numba==0.56.4  # Update Numba to a newer version that supports the required NumPy
-scikit-learn==1.0.2  # Update scikit-learn to a version that supports newer dependencies
+numba==0.56.4  # 确保NumPy兼容
+scikit-learn==1.0.2  
 streamlit==1.23.1
 pyLDAvis==3.2.2
 pycaret==3.3.2
