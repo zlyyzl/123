@@ -1,7 +1,5 @@
 setuptools
 
-scikit-learn==0.23.2
-
 openpyxl==2.5.6
 
 streamlit==1.23.1
@@ -12,8 +10,11 @@ pyLDAvis==3.2.2
 
 pycaret
 
-numba==0.54.1
 
 numpy>=1.23.2
 
 pandas==1.5.3
+
+numba==0.55.0  
+
+scikit-learn==1.0.2 
