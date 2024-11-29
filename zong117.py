@@ -19,7 +19,6 @@ import numpy as np
 import streamlit.components.v1 as components
 import openpyxl
 import os
-from river import metrics 
 
 def get_db_connection():
     conn = sqlite3.connect('users.db')
@@ -243,31 +242,10 @@ def prediction_page():
 
                 st.write("SHAP values for each feature:")
                 st.dataframe(shap_df)
-                metric = metrics.Accuracy()
-
-# 选择标签
-                label = st.selectbox('Outcome for Learning', [0, 1])
-
-                if st.button('Add Data for Learning'):
-    # 遍历 input_df 的每一行数据
-                    for index, row in input_df.iterrows():
-        # 将特征和标签转换为字典格式
-                        x = row.to_dict()
-                        y = row[label]
-
-        # 学习新数据
-                        model = model.learn_one(x, y)
-
-        # 更新度量
-                        y_pred = model.predict_one(x)
-                        metric = metric.update(y, y_pred)
-
-    # 保存更新后的模型
-                        joblib.dump(model, 'tuned_rf_pre_BUN.pkl')
-
-    # 显示成功信息和当前准确率
-                        st.success("New data has been added to the model for continuous learning!")
-                        st.write(f"Current accuracy: {metric:.4f}")
+            label = st.selectbox('Outcome for Learning', [0, 1])
+            if st.button('Add Data for Learning'): 
+                model.fit(input_df, [label])
+                st.success("New data has been added to the model for continuous learning!")
 
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
@@ -781,5 +759,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
