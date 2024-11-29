@@ -266,17 +266,8 @@ def prediction_page():
                 st.pyplot(plt) 
             st.write("This section will handle preoperative batch predictions.Please click on the link to download the form and fill in the corresponding data. After that, click on the Browse files button to upload file for prediciton, you can see the prediction of the classifier at the bottom. This page supports batch prediction of the outcome of multiple patients at one time, and can predict the outcome of patients with missing values.")
 
-            import streamlit as st
-            import pandas as pd
-            import openpyxl
-            import base64
-            import os
-
-# 创建一个新的工作簿
             csv_exporter = openpyxl.Workbook()
             sheet = csv_exporter.active
-
-# 在工作表中添加表头
             sheet.cell(row=1, column=1).value = 'NIHSS'
             sheet.cell(row=1, column=2).value = 'GCS'
             sheet.cell(row=1, column=3).value = 'pre_eGFR'
@@ -284,12 +275,8 @@ def prediction_page():
             sheet.cell(row=1, column=5).value = 'PC_ASPECTS'
             sheet.cell(row=1, column=6).value = 'Age'
             sheet.cell(row=1, column=7).value = 'pre_BUN'
-
-# 保存文件（注意文件名的一致性）
             csv_file_name = 'for_predictions.csv'
             csv_exporter.save(csv_file_name)
-
-# 检查文件是否存在并读取文件
             if os.path.exists(csv_file_name):
                 data = open(csv_file_name, 'rb').read()
                 b64 = base64.b64encode(data).decode('UTF-8')
@@ -297,16 +284,12 @@ def prediction_page():
                 st.markdown(href, unsafe_allow_html=True)
             else:
                  st.error(f"文件 '{csv_file_name}' 找不到，请检查文件生成的过程。")
-
-# 关闭工作簿
             csv_exporter.close()
 
-# 文件上传
             file_upload = st.file_uploader("Upload CSV file for predictions", type=["csv"])
 
             if file_upload is not None:
                 try:
-        # 读取上传的CSV文件
                     data = pd.read_csv(file_upload, sep=',', error_bad_lines=False)
                     st.write("Uploaded data:")
                     st.dataframe(data)  # 显示上传的数据，可以进行后续操作
