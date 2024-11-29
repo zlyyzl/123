@@ -17,3 +17,5 @@ pycaret
 numba==0.54.1
 
 numpy==1.20.3
+
+shap
