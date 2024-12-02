@@ -245,9 +245,16 @@ def prediction_page():
                 st.dataframe(shap_df)
             label = st.selectbox('Outcome for Learning', [0, 1])
             if st.button('Add Data for Learning'): 
-                label_array = np.array([label])  
-                model.fit(input_df, label_array)  
-                st.success("New data has been added to the model for continuous learning!")
+                label_array = np.array([label])
+                print("Input DataFrame:", input_df)
+                print("Label Array:", label_array)
+
+                try:
+                    model.fit(input_df, label_array)
+                    st.success("New data has been added to the model for continuous learning!")
+                except ValueError as e:
+                    st.error(f"An error occurred: {e}")  
+                    print(f"Error details: {e}") 
 
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
