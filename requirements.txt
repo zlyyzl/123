@@ -5,7 +5,7 @@ numpy==1.18.5
 scipy==1.5.4
 scikit-learn==0.23.2
 
-runtime: python-3.8
+python_version = "3.8"
 
 openpyxl
 
