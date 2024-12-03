@@ -469,6 +469,8 @@ def prediction_page():
             if file_upload is not None: 
                 try: 
                     data = pd.read_csv(file_upload, sep=',', error_bad_lines=False) 
+                    data.columns = data.columns.str.strip()  # 清理列名的空白
+                    st.write(data.columns)  
 
                     if 'MRSI' in data.columns: 
                         y_true = data['MRSI'].values 
