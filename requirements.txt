@@ -16,10 +16,9 @@ pycaret==2.3.10
 
 numba
 
-numpy==1.21.6
+numpy==1.19.5
 
 shap
 
-scipy==1.7.3
 
  
