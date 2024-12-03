@@ -1,6 +1,10 @@
 setuptools
 
+
+numpy==1.18.5
+scipy==1.5.4
 scikit-learn==0.23.2
+
 
 openpyxl
 
@@ -16,7 +20,6 @@ pycaret
 
 numba
 
-numpy
 
 shap
 
