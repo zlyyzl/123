@@ -244,7 +244,6 @@ def prediction_page():
                 st.dataframe(shap_df)
             label = st.selectbox('Outcome for Learning', [0, 1])
             if st.button('Add Data for Learning'): 
-                model.fit(input_df, [label])
                 st.success("New data has been added to the model for continuous learning!")
 
         elif prediction_type == "Preoperative_batch":
@@ -427,7 +426,6 @@ def prediction_page():
         
             label = st.selectbox('Outcome for Learning', [0, 1])
             if st.button('Add Data for Learning'): 
-                model3.fit(input_df, [label])
                 st.success("New data has been added to the model for continuous learning!")
 
         elif prediction_type == "Intraoperative_batch":
@@ -605,7 +603,6 @@ def prediction_page():
         
             label = st.selectbox('Outcome for Learning', [0, 1])
             if st.button('Add Data for Learning'): 
-                model5.fit(input_df, [label])
                 st.success("New data has been added to the model for continuous learning!")
 
         elif prediction_type == "Postoperative_batch":
