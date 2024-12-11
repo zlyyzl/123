@@ -104,6 +104,11 @@ def prediction_page():
         st.write("""
             This application aims to predict functional outcome in  patients with posterior circulation large vessel occlusion following mechanical thrombectomy，thus facilitates informed clinical judgment, supports personalized treatment and follow-up plans, and establishes realistic treatment expectations.
         """)
+        st.markdown("""
+        <div style="color: red; font-weight: bold; text-transform: uppercase;">
+            PLEASE NOTE: SOME FUNCTIONS ON THIS PAGE MAY NOT BE AVAILABLE. PLEASE VISIT <a href="https://zong116.onrender.com/" style="color: blue;">THIS LINK</a> FOR MORE INFORMATION.
+        </div>
+    """, unsafe_allow_html=True)
 
         st.header("Main Features")
         features = [
@@ -204,11 +209,7 @@ def prediction_page():
         if prediction_type == "Preoperative_number":
             st.subheader("Preoperative Number Prediction")
             st.write("This section will manage preoperative predictions by inputting the necessary data.Please fill in the blanks with corresponding data. After that,click on the Predict button at the bottom to see the prediction of the classifier. ")
-            st.markdown("""
-        <div style="color: red; font-weight: bold; text-transform: uppercase;">
-            PLEASE NOTE: SOME FUNCTIONS ON THIS PAGE MAY NOT BE AVAILABLE. PLEASE VISIT <a href="https://zong116.onrender.com/" style="color: blue;">THIS LINK</a> FOR MORE INFORMATION.
-        </div>
-    """, unsafe_allow_html=True)
+
             
             NIHSS = st.number_input('NIHSS', min_value = 4,max_value = 38,value = 10) 
             GCS= st.number_input('GCS', min_value = 0,max_value = 15 ,value = 10) 
