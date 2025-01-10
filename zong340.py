@@ -193,7 +193,8 @@ def prediction_page():
         model5 = joblib.load('tuned_rf_post_BUN.pkl')
         model6 = load_model('tuned_rf_post_BUN_model')
         
-
+        def handle_missing_values(X):
+            return X.fillna(X.mean())  # 用均值填补缺失值
         class DynamicWeightedForest:
             def __init__(self, base_trees):
                 self.trees = base_trees
