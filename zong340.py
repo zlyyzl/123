@@ -364,16 +364,17 @@ def prediction_page():
                                 
                                 if len(model2.estimators_) > 0:
                                     old_roc_aucs = []
-                                    for tree in model2.estimators_:
+                                    rf_model2 = model2.named_steps['trained_model']
+                                    for tree in rf_model2.estimators_:
                                         old_predictions = tree.predict_proba(X)[:, 1]
                                         old_roc_auc = roc_auc_score(y, old_predictions)
                                         old_roc_aucs.append(old_roc_auc)
                                         worst_tree_index = old_roc_aucs.index(min(old_roc_aucs))
-                                        model2.estimators_[worst_tree_index] = new_tree  # 用新树替换表现最差的树
+                                        rf_model2.estimators_[worst_tree_index] = new_tree  # 用新树替换表现最差的树
                                         st.success("Replaced the worst-performing tree with the new tree.")
                                 else:
                                 # 如果没有旧树，则直接添加新树
-                                    model2.estimators_.append(new_tree)
+                                    rf_model2.estimators_.append(new_tree)
                                     st.success("New tree added to the model.")
 
                         def plot_combined_graphs(y_true, y_scores):
