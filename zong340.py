@@ -194,41 +194,7 @@ def prediction_page():
         model6 = load_model('tuned_rf_post_BUN_model')
         
         def handle_missing_values(X):
-            return X.fillna(X.mean())  # 用均值填补缺失值
-        class DynamicWeightedForest:
-            def __init__(self, base_trees):
-                self.trees = base_trees
-                self.tree_weights = np.ones(len(self.trees)) / len(self.trees)  
-
-            def predict_proba(self, X):
-                weighted_votes = np.zeros((X.shape[0], 2))
-                for i, tree in enumerate(self.trees):
-                    proba = tree.predict_proba(X)
-                    weighted_votes += self.tree_weights[i] * proba
-                return weighted_votes / np.sum(self.tree_weights)
-
-            def update_weights(self, X, y):
-                for i, tree in enumerate(self.trees):
-                    predictions = tree.predict(X)
-                    accuracy = np.mean(predictions == y)
-                    self.tree_weights[i] = accuracy
-                    self.tree_weights /= np.sum(self.tree_weights)  
-
-            def add_tree(self, new_tree):
-                self.trees.append(new_tree)
-                self.tree_weights = np.append(self.tree_weights, [1.0])
-                self.tree_weights /= np.sum(self.tree_weights)                                 
-                
-            def save_model(model, model_name):
-                joblib.dump(model, model_name)
-
-            def load_model_from_file(model_name):
-                if os.path.exists(model_name):
-                    return joblib.load(model_name)
-                return None
-
-        pre_weighted_forest = DynamicWeightedForest(model.estimators_)
-        
+            return X.fillna(X.mean())       
      
         def st_shap(plot, height=None):
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
@@ -366,17 +332,16 @@ def prediction_page():
 
                                 if len(rf_model2.estimators_) > 0:
                                     old_roc_aucs = []
+    
                                     for tree in rf_model2.estimators_:
                                         old_predictions = tree.predict_proba(X)[:, 1]
                                         old_roc_auc = roc_auc_score(y, old_predictions)
                                         old_roc_aucs.append(old_roc_auc)
 
-                                # 找到表现最差的树，并用新树替换
-                                        worst_tree_index = old_roc_aucs.index(min(old_roc_aucs))
-                                        rf_model2.estimators_[worst_tree_index] = new_tree  # 用新树替换表现最差的树
-                                        st.success("Replaced the worst-performing tree with the new tree.")
+                                    worst_tree_index = old_roc_aucs.index(min(old_roc_aucs))
+                                    rf_model2.estimators_[worst_tree_index] = new_tree  # 用新树替换表现最差的树
+                                    st.success("Replaced the worst-performing tree with the new tree.")  # 仅在替换后输出一次
                                 else:
-    # 如果没有旧树，则直接添加新树
                                     rf_model2.estimators_.append(new_tree)  # 添加新树
                                     st.success("New tree added to the model.")
 
