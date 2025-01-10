@@ -362,19 +362,22 @@ def prediction_page():
                                 new_tree = DecisionTreeClassifier(random_state=42)
                                 new_tree.fit(X, y)
                                 
-                                if len(model2.estimators_) > 0:
+                                rf_model2 = model2.named_steps['trained_model']  # 从 Pipeline 中获取分类器
+
+                                if len(rf_model2.estimators_) > 0:
                                     old_roc_aucs = []
-                                    rf_model2 = model2.named_steps['trained_model']
                                     for tree in rf_model2.estimators_:
                                         old_predictions = tree.predict_proba(X)[:, 1]
                                         old_roc_auc = roc_auc_score(y, old_predictions)
                                         old_roc_aucs.append(old_roc_auc)
+
+                                # 找到表现最差的树，并用新树替换
                                         worst_tree_index = old_roc_aucs.index(min(old_roc_aucs))
                                         rf_model2.estimators_[worst_tree_index] = new_tree  # 用新树替换表现最差的树
                                         st.success("Replaced the worst-performing tree with the new tree.")
                                 else:
-                                # 如果没有旧树，则直接添加新树
-                                    rf_model2.estimators_.append(new_tree)
+    # 如果没有旧树，则直接添加新树
+                                    rf_model2.estimators_.append(new_tree)  # 添加新树
                                     st.success("New tree added to the model.")
 
                         def plot_combined_graphs(y_true, y_scores):
