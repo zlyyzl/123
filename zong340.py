@@ -353,6 +353,7 @@ def prediction_page():
                         if st.button('Add Data for Learning'): 
                             X = data.drop(columns=['MRSI'])  
                             y = data['MRSI']
+                            X = handle_missing_values(X)
                             predictions = model2.predict_proba(X)[:, 1]
                             roc_auc = roc_auc_score(y, predictions)   
                             if roc_auc < 0.78:
