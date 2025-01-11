@@ -228,7 +228,7 @@ def prediction_page():
                     base_trees = [DecisionTreeClassifier(random_state=42)]  # 默认空模型
                     hospital_model = DynamicWeightedForest(base_trees)
                 hospital_models[hospital_id] = hospital_model
-             return hospital_models[hospital_id]
+            return hospital_models[hospital_id]
 
          def save_hospital_model(hospital_id, model):
              model_file = f'{hospital_id}_weighted_forest.pkl'
