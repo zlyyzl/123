@@ -183,6 +183,15 @@ def prediction_page():
     
         image = Image.open('it.tif')
         st.image(image, use_column_width=True)
+        
+    elif page == "Prediction":
+        st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
+    
+        model = joblib.load('tuned_rf_pre_BUN.pkl')
+        model2 = load_model('tuned_rf_pre_BUN_model')
+        model3 = joblib.load('tuned_rf_intra_BUN.pkl')
+        model4 = load_model('tuned_rf_intra_BUN_model')
+        model5 = joblib.load('tuned_rf_post_BUN.pkl')
 
         class DynamicWeightedForest:
             def __init__(self, base_trees):
@@ -238,22 +247,9 @@ def prediction_page():
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
             components.html(shap_html, height=height)
             
-        elif page == "Prediction":
-            st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
-    
-            model = joblib.load('tuned_rf_pre_BUN.pkl')
-            model2 = load_model('tuned_rf_pre_BUN_model')
-            model3 = joblib.load('tuned_rf_intra_BUN.pkl')
-            model4 = load_model('tuned_rf_intra_BUN_model')
-            model5 = joblib.load('tuned_rf_post_BUN.pkl')
-            model6 = load_model('tuned_rf_post_BUN_model')
-        
-            pre_weighted_forest = DynamicWeightedForest(model.estimators_)
-
             st.title("Dynamic Weighted Forest with Hospital-Specific Learning")
             st.sidebar.header("Settings")
 
-    # 医院选择
             hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
             current_model = load_hospital_model(hospital_id)     
 
