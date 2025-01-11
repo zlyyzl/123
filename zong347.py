@@ -211,14 +211,16 @@ def prediction_page():
                     weighted_votes += self.tree_weights[i] * proba
                 return weighted_votes / np.sum(self.tree_weights)
 
-            def get_weighted_shap_values(forest, X):
+            def get_weighted_shap_values(self, X):
+
                 shap_values = np.zeros_like(X.values, dtype=float)
                 explainer_values = []
-                for tree, weight in zip(forest.trees, forest.tree_weights):
+                for tree, weight in zip(self.trees, self.tree_weights):
                     explainer = shap.TreeExplainer(tree)
                     tree_shap_values = explainer.shap_values(X)[1]  # 假设解释正类
                     explainer_values.append(weight * tree_shap_values)
                 return np.sum(explainer_values, axis=0)
+
 
     
             def update_weights(self, X, y):
