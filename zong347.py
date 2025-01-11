@@ -301,6 +301,7 @@ def prediction_page():
                     st.dataframe(shap_df)
     
                     label = st.selectbox('Outcome for Learning', [0, 1])  
+                    st.write("Rendering Add Data for Learning button...") 
                     if st.button('Add Data for Learning'):
                         st.write("Button clicked!")  # 验证点击事件是否触发
                         new_tree = DecisionTreeClassifier(random_state=42)
