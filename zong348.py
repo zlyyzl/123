@@ -210,7 +210,7 @@ def prediction_page():
               
             def save_model(self, model_name):
                 with open(model_name, 'wb') as file:
-                joblib.dump(self, file)
+                    joblib.dump(self, file)
 
             @staticmethod
             def load_model(model_name):
