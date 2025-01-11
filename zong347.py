@@ -295,7 +295,7 @@ def prediction_page():
     
                     shap_df = pd.DataFrame({
                         'Feature': input_df.columns,
-                        'SHAP Value': shap_values[1].flatten()
+                        'SHAP Value': shap_values[0]
                     })
                     st.write("SHAP values for each feature:")
                     st.dataframe(shap_df)
