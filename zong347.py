@@ -221,25 +221,21 @@ def prediction_page():
                 if os.path.exists(model_name):
                     return joblib.load(model_name)
                 return None
-        
-        st.title('Functional Outcome Prediction App for Patients with Posterior Circulation Large Vessel Occlusion After Mechanical Thrombectomy')
-        
+
+
         model = joblib.load('tuned_rf_pre_BUN.pkl')
-        model2 = load_model('tuned_rf_pre_BUN_model')  # 保持原样
+        model2 = load_model('tuned_rf_pre_BUN_model')
         model3 = joblib.load('tuned_rf_intra_BUN.pkl')
-        model4 = load_model('tuned_rf_intra_BUN_model')  # 保持原样
+        model4 = load_model('tuned_rf_intra_BUN_model')
         model5 = joblib.load('tuned_rf_post_BUN.pkl')
-        model6 = load_model('tuned_rf_post_BUN_model')  
-        
-        # 初始化动态加权森林
-        pre_weighted_forest = DynamicWeightedForest(model.estimators_)
+        model6 = load_model('tuned_rf_post_BUN_model')
+
+        pre_weighted_forest = DynamicWeightedForest(model.estimators_) if model2 is not None else None
         
         def st_shap(plot, height=None):
-            """将 SHAP 图形嵌入 Streamlit 应用"""
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
             components.html(shap_html, height=height)
         
-        # 选择预测类型
         prediction_type = st.sidebar.selectbox(
             "How would you like to predict?",
             ("Preoperative_number", "Preoperative_batch", "Intraoperative_number", "Intraoperative_batch", 
@@ -250,7 +246,6 @@ def prediction_page():
             st.subheader("Preoperative Number Prediction")
             st.write("Please fill in the blanks with corresponding data and click 'Predict'.")
         
-            # 输入特征
             NIHSS = st.number_input('NIHSS', min_value=4, max_value=38, value=10)
             GCS = st.number_input('GCS', min_value=0, max_value=15, value=10)
             pre_eGFR = st.number_input('pre_eGFR', min_value=10.00, max_value=250.00, value=111.5)
@@ -272,18 +267,20 @@ def prediction_page():
             input_df = pd.DataFrame([features])
         
             if st.button('Predict'):
-                # 进行预测
-                output = model.predict_proba(input_df)[:, 1]
-                explainer = shap.Explainer(model)
-                shap_values = explainer(input_df)
+                if pre_weighted_forest is None:
+                    output = model.predict_proba(input_df)[:, 1]
+                    explainer = shap.Explainer(model)
+                    shap_values = explainer(input_df)
+                else:
+                    output = pre_weighted_forest.predict_proba(input_df)[:, 1]
+                    explainer = shap.Explainer(pre_weighted_forest)
+                    shap_values = explainer(input_df)
         
                 st.write('Based on feature values, predicted probability of good functional outcome is ' + str(output[0]))
         
-                # 创建 SHAP 可视化
                 shap_values_for_plot = shap_values.values[0]
                 st_shap(shap.force_plot(explainer.expected_value, shap_values_for_plot, input_df.iloc[0]))
         
-                # 创建 SHAP 数据框
                 shap_df = pd.DataFrame({
                     'Feature': input_df.columns,
                     'SHAP Value': shap_values_for_plot.flatten()
@@ -291,7 +288,6 @@ def prediction_page():
                 st.write("SHAP values for each feature:")
                 st.dataframe(shap_df)
         
-                # 添加数据用于增量学习
                 label = st.selectbox('Outcome for Learning', [0, 1])
                 if st.button('Add Data for Learning'):
                     new_tree = DecisionTreeClassifier(random_state=42)
@@ -299,7 +295,6 @@ def prediction_page():
                     pre_weighted_forest.add_tree(new_tree)
                     pre_weighted_forest.update_weights(input_df, [label])
                     st.success("New tree added and weights updated dynamically!")
-
 
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
