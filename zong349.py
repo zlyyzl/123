@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import base64
@@ -196,10 +195,14 @@ def prediction_page():
         
 
         class DynamicWeightedForest:
+
+            def __call__(self, X):
+                return self.predict_proba(X)
+                
             def __init__(self, base_trees):
                 self.trees = base_trees
-                self.tree_weights = np.ones(len(self.trees)) / len(self.trees)  
-
+                self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
+    
             def predict_proba(self, X):
                 weighted_votes = np.zeros((X.shape[0], 2))
                 for i, tree in enumerate(self.trees):
@@ -207,72 +210,66 @@ def prediction_page():
                     weighted_votes += self.tree_weights[i] * proba
                 return weighted_votes / np.sum(self.tree_weights)
 
+            def get_weighted_shap_values(self, X):
+                shap_values_sum = np.zeros((X.shape[0], X.shape[1]))
+                expected_value_sum = 0
+            
+                for tree, weight in zip(self.trees, self.tree_weights):
+                    explainer = shap.TreeExplainer(tree)
+                    shap_values_tree = explainer.shap_values(X)[1]  # 正类的 SHAP 值
+                    expected_value_tree = explainer.expected_value[1]
+            
+                    shap_values_sum += weight * shap_values_tree
+                    expected_value_sum += weight * expected_value_tree
+            
+                return shap_values_sum, expected_value_sum
+
+    
             def update_weights(self, X, y):
                 for i, tree in enumerate(self.trees):
                     predictions = tree.predict(X)
                     accuracy = np.mean(predictions == y)
                     self.tree_weights[i] = accuracy
-                    self.tree_weights /= np.sum(self.tree_weights)  
-
+                self.tree_weights /= np.sum(self.tree_weights)
+    
             def add_tree(self, new_tree):
                 self.trees.append(new_tree)
                 self.tree_weights = np.append(self.tree_weights, [1.0])
-                self.tree_weights /= np.sum(self.tree_weights)                                 
-                
+                self.tree_weights /= np.sum(self.tree_weights)
+    
             def save_model(self, model_name):
-                with open(model_name, 'wb') as file:
-                    joblib.dump(self, file)
-
+                joblib.dump(self, model_name)
+    
             @staticmethod
             def load_model(model_name):
                 if os.path.exists(model_name):
-                    with open(model_name, 'rb') as file:
-                        return joblib.load(file)
+                    return joblib.load(model_name)
                 return None
-            
-            
-            
-            hospital_models = {}
+    
+        def load_hospital_model(hospital_id):
+            model_file = f'{hospital_id}_weighted_forest.pkl'
+            if os.path.exists(model_file):
+                return DynamicWeightedForest.load_model(model_file)
+            else:
+                initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
+                return DynamicWeightedForest(initial_model.estimators_)
 
-            def load_hospital_model(hospital_id):
-                model_file = f'{hospital_id}_weighted_forest.pkl'
-                if hospital_id not in hospital_models:
-                    hospital_model = DynamicWeightedForest.load_model(model_file)
-                    if hospital_model is None:
-                        base_trees = [DecisionTreeClassifier(random_state=42)]  # 默认空模型
-                        hospital_model = DynamicWeightedForest(base_trees)
-                    hospital_models[hospital_id] = hospital_model
-                return hospital_models[hospital_id]
-
-            def save_hospital_model(hospital_id, model):
-                model_file = f'{hospital_id}_weighted_forest.pkl'
-                model.save_model(model_file)
-
-
-        pre_weighted_forest = DynamicWeightedForest(model.estimators_)
-        
-     
-        def st_shap(plot, height=None):
-            shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
-            components.html(shap_html, height=height)
-            
-        st.title("Dynamic Weighted Forest with Hospital-Specific Learning")
-        st.sidebar.header("Settings")
-
-# 医院选择
         hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
-        current_model = load_hospital_model(hospital_id)   
-            
+        current_model = load_hospital_model(hospital_id)
+    
+        def st_shap(plot):
+            shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
+            components.html(shap_html)
 
         prediction_type = st.sidebar.selectbox(
             "How would you like to predict?",
             ("Preoperative_number", "Preoperative_batch", "Intraoperative_number", "Intraoperative_batch", 
              "Postoperative_number", "Postoperative_batch")
-         )
-
+        )
+    
         if prediction_type == "Preoperative_number":
             st.subheader("Preoperative Number Prediction")
-            st.write("This section will manage preoperative predictions by inputting the necessary data.Please fill in the blanks with corresponding data. After that,click on the Predict button at the bottom to see the prediction of the classifier. ")
+            st.write("Please fill in the blanks with corresponding data.")
     
             NIHSS = st.number_input('NIHSS', min_value = 4,max_value = 38,value = 10) 
             GCS= st.number_input('GCS', min_value = 0,max_value = 15 ,value = 10) 
@@ -315,15 +312,9 @@ def prediction_page():
             if st.button('Add Data for Learning'): 
                 new_tree = DecisionTreeClassifier(random_state=42)
                 new_tree.fit(input_df, [label])
-                current_model.add_tree(new_tree)
-                current_model.update_weights(input_df, [label])
-                save_hospital_model(hospital_id, current_model)
-                st.success(f"Updated model for {hospital_id} and saved successfully!")
-                
-            if st.button('Evaluate Model Performance'):
-                predictions = current_model.predict_proba(input_df)[:, 1]
-                auc_score = roc_auc_score([label], predictions)
-                st.write(f"AUC for {hospital_id}: {auc_score:.2f}")
+                pre_weighted_forest.add_tree(new_tree)
+                pre_weighted_forest.update_weights(input_df, [label])
+                st.success("New tree added and weights updated dynamically!")
 
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
