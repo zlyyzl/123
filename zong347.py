@@ -300,22 +300,24 @@ def prediction_page():
                     st.write("SHAP values for each feature:")
                     st.dataframe(shap_df)
     
-                    label = st.selectbox('Outcome for Learning', [0, 1])  
-                    st.write("Rendering Add Data for Learning button...") 
+                    # 渲染 Add Data for Learning 按钮
+                    label = st.selectbox('Outcome for Learning', [0, 1])
                     if st.button('Add Data for Learning'):
                         st.write("Button clicked!")  # 验证点击事件是否触发
-                        new_tree = DecisionTreeClassifier(random_state=42)
-                        st.write("Initialized new Decision Tree.")  # 添加此行
-                        new_tree.fit(input_df, [label])
-                        st.write("Fitted new tree with input data.")  # 添加此行
-                        current_model.add_tree(new_tree)
-                        st.write("Added new tree to the model.")  # 添加此行
-                        current_model.update_weights(input_df, [label])
-                        st.write("Updated tree weights.")  # 添加此行
-                        current_model.save_model(f'{hospital_id}_weighted_forest.pkl')
-                        st.success("New tree added and weights updated dynamically! Model saved successfully.")
-                except Exception as e:
-                    st.error(f"Error during prediction: {e}")
+                        try:
+                            new_tree = DecisionTreeClassifier(random_state=42)
+                            st.write("Initialized new Decision Tree.")
+                            new_tree.fit(input_df, [label])
+                            st.write("Fitted new tree with input data.")
+                            current_model.add_tree(new_tree)
+                            st.write("Added new tree to the model.")
+                            current_model.update_weights(input_df, [label])
+                            st.write("Updated tree weights.")
+                            current_model.save_model(f'{hospital_id}_weighted_forest.pkl')
+                            st.success("New tree added and weights updated dynamically! Model saved successfully.")
+                        except Exception as e:
+                            st.error(f"Error during model update: {e}")
+
                     
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
