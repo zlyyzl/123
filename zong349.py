@@ -192,8 +192,9 @@ def prediction_page():
         model4 = load_model('tuned_rf_intra_BUN_model')
         model5 = joblib.load('tuned_rf_post_BUN.pkl')
         model6 = load_model('tuned_rf_post_BUN_model')
-        class DynamicWeightedForest:
 
+        class DynamicWeightedForest:
+        
             def __call__(self, X):
                 return self.predict_proba(X)
                 
@@ -249,6 +250,7 @@ def prediction_page():
                     return None
         
         
+        # load_hospital_model 函数
         def load_hospital_model(hospital_id):
             model_file = f'{hospital_id}_weighted_forest.pkl'
             st.write(f"Attempting to load hospital model: {model_file}")
@@ -272,8 +274,10 @@ def prediction_page():
                 return None
         
         
+        # 主代码中调用
         hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
         current_model = load_hospital_model(hospital_id)
+
 
     
         def st_shap(plot):
