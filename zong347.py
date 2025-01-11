@@ -314,7 +314,7 @@ def prediction_page():
                             st.write("Updated tree weights.")  # 添加此行
                             current_model.save_model(f'{hospital_id}_weighted_forest.pkl')
                             st.success("New tree added and weights updated dynamically! Model saved successfully.")
-                        except Exception as e:
+                         except Exception as e:
                             st.error(f"Error during model update: {e}")
 
         elif prediction_type == "Preoperative_batch":
