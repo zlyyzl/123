@@ -312,9 +312,16 @@ def prediction_page():
                     st.dataframe(shap_df)
                     label = st.selectbox('Outcome for Learning', [0, 1])
 
-                    if st.button('Add Data for Learning'): 
-                        st.write("Add Data for Learning button clicked!")  
+                    if 'add_data_clicked' not in st.session_state:
+                        st.session_state['add_data_clicked'] = False
+                    
+                    if st.button('Add Data for Learning'):
+                        st.session_state['add_data_clicked'] = True
+                    
+                    if st.session_state['add_data_clicked']:
+                        st.write("Add Data for Learning button clicked!")  # 确认按钮状态
                         try:
+                            st.write("Starting to add new tree to the model.")
                             new_tree = DecisionTreeClassifier(random_state=42)
                             st.write("Initialized new Decision Tree.")
                             new_tree.fit(input_df, [label])
@@ -327,8 +334,7 @@ def prediction_page():
                             st.success("New tree added and weights updated dynamically! Model saved successfully.")
                         except Exception as e:
                             st.error(f"Error during model update: {e}")
-                except Exception as e:
-                    st.error(f"Error during prediction: {e}")
+
 
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
