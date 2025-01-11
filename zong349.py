@@ -192,7 +192,30 @@ def prediction_page():
         model4 = load_model('tuned_rf_intra_BUN_model')
         model5 = joblib.load('tuned_rf_post_BUN.pkl')
         model6 = load_model('tuned_rf_post_BUN_model')
-        
+        def load_hospital_model(hospital_id):
+            model_file = f'{hospital_id}_weighted_forest.pkl'
+            st.write(f"Attempting to load hospital model: {model_file}")
+            try:
+                if os.path.exists(model_file):
+                    try:
+                        model = DynamicWeightedForest.load_model(model_file)
+                        st.write(f"Model loaded successfully: {model_file}")
+                        return model
+                    except EOFError:
+                        st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
+                        os.remove(model_file)
+                else:
+                    st.warning(f"Model file not found: {model_file}. Creating a new model.")
+                    
+                initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
+                st.write("Initialized a new model from base trees.")
+                return DynamicWeightedForest(initial_model.estimators_)
+            except Exception as e:
+                st.error(f"Failed to load or create model for {hospital_id}: {e}")
+                return None
+
+        hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
+        current_model = load_hospital_model(hospital_id)
 
         class DynamicWeightedForest:
 
@@ -249,33 +272,6 @@ def prediction_page():
                 else:
                     st.error(f"Model file {model_name} not found.")
                     return None
-
-    
-            def load_hospital_model(hospital_id):
-                model_file = f'{hospital_id}_weighted_forest.pkl'
-                st.write(f"Attempting to load hospital model: {model_file}")
-                try:
-                    if os.path.exists(model_file):
-                        try:
-                            model = DynamicWeightedForest.load_model(model_file)
-                            st.write(f"Model loaded successfully: {model_file}")
-                            return model
-                        except EOFError:
-                            st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
-                            os.remove(model_file)
-                    else:
-                        st.warning(f"Model file not found: {model_file}. Creating a new model.")
-                    
-                    initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
-                    st.write("Initialized a new model from base trees.")
-                    return DynamicWeightedForest(initial_model.estimators_)
-                except Exception as e:
-                    st.error(f"Failed to load or create model for {hospital_id}: {e}")
-                    return None
-
-            hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
-            current_model = load_hospital_model(hospital_id)
-    
     
         def st_shap(plot):
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
