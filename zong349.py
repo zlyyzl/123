@@ -273,8 +273,8 @@ def prediction_page():
                     st.error(f"Failed to load or create model for {hospital_id}: {e}")
                     return None
 
-        hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
-        current_model = load_hospital_model(hospital_id)
+            hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
+            current_model = load_hospital_model(hospital_id)
     
     
         def st_shap(plot):
