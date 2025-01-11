@@ -297,30 +297,22 @@ def prediction_page():
                 feature_value = features[selected_feature]
                 values = np.linspace(feature_value - perturbation, feature_value + perturbation, num=100)
                 predictions = []
-
-    # 计算敏感性分析
                 for value in values:
                     temp_df = input_df.copy()
                     temp_df[selected_feature] = value
-        
-        # 计算模型的预测概率
                     prediction = model.predict_proba(temp_df)[:, 1]
                     predictions.append(prediction[0])  # 确保每个预测是单个值
-
-    # 检查预测结果
-               if len(values) == len(predictions):  # 确保长度匹配
-        # 使用Plotly绘制敏感性分析图
-                   sensitivity_df = pd.DataFrame({
+                if len(values) == len(predictions):  # 确保长度匹配
+                    sensitivity_df = pd.DataFrame({
                             selected_feature: values,
                            'Predicted Probability': predictions
                                  })
-                   fig = px.line(sensitivity_df, x=selected_feature, y='Predicted Probability',
+                    fig = px.line(sensitivity_df, x=selected_feature, y='Predicted Probability',
                       title=f'Sensitivity Analysis for {selected_feature}')
-        
-        # 显示图表
-                   st.plotly_chart(fig)
-               else:
-                   st.error("Error in prediction lengths")
+
+                    st.plotly_chart(fig)
+                else:
+                    st.error("Error in prediction lengths")
 
             if st.button("Show Global Feature Importance"):
                 importances = model.feature_importances_
