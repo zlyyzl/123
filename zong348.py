@@ -184,17 +184,6 @@ def prediction_page():
         image = Image.open('it.tif')
         st.image(image, use_column_width=True)
 
-    elif page == "Prediction":
-        st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
-    
-        model = joblib.load('tuned_rf_pre_BUN.pkl')
-        model2 = load_model('tuned_rf_pre_BUN_model')
-        model3 = joblib.load('tuned_rf_intra_BUN.pkl')
-        model4 = load_model('tuned_rf_intra_BUN_model')
-        model5 = joblib.load('tuned_rf_post_BUN.pkl')
-        model6 = load_model('tuned_rf_post_BUN_model')
-        
-
         class DynamicWeightedForest:
             def __init__(self, base_trees):
                 self.trees = base_trees
@@ -218,57 +207,61 @@ def prediction_page():
                 self.trees.append(new_tree)
                 self.tree_weights = np.append(self.tree_weights, [1.0])
                 self.tree_weights /= np.sum(self.tree_weights)                                 
-                
+              
             def save_model(self, model_name):
                 with open(model_name, 'wb') as file:
-                    joblib.dump(self, file)
+                joblib.dump(self, file)
 
             @staticmethod
             def load_model(model_name):
                 if os.path.exists(model_name):
-                    with open(model_name, 'rb') as file:
-                        return joblib.load(file)
+                    return joblib.load(model_name)
                 return None
-            
-            
-            
-            hospital_models = {}
 
-            def load_hospital_model(hospital_id):
-                model_file = f'{hospital_id}_weighted_forest.pkl'
-                if hospital_id not in hospital_models:
-                    hospital_model = DynamicWeightedForest.load_model(model_file)
-                    if hospital_model is None:
-                        base_trees = [DecisionTreeClassifier(random_state=42)]  # 默认空模型
-                        hospital_model = DynamicWeightedForest(base_trees)
-                    hospital_models[hospital_id] = hospital_model
-                return hospital_models[hospital_id]
+        hospital_models = {}
 
-            def save_hospital_model(hospital_id, model):
-                model_file = f'{hospital_id}_weighted_forest.pkl'
-                model.save_model(model_file)
+        def load_hospital_model(hospital_id):
+            model_file = f'{hospital_id}_weighted_forest.pkl'
+            if hospital_id not in hospital_models:
+                hospital_model = DynamicWeightedForest.load_model(model_file)
+                if hospital_model is None:
+                    base_trees = [DecisionTreeClassifier(random_state=42)]  # 默认空模型
+                    hospital_model = DynamicWeightedForest(base_trees)
+                hospital_models[hospital_id] = hospital_model
+             return hospital_models[hospital_id]
 
-
-        pre_weighted_forest = DynamicWeightedForest(model.estimators_)
-        
-     
+         def save_hospital_model(hospital_id, model):
+             model_file = f'{hospital_id}_weighted_forest.pkl'
+             model.save_model(model_file)
+    
         def st_shap(plot, height=None):
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
             components.html(shap_html, height=height)
             
-        st.title("Dynamic Weighted Forest with Hospital-Specific Learning")
-        st.sidebar.header("Settings")
+        elif page == "Prediction":
+            st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
+    
+            model = joblib.load('tuned_rf_pre_BUN.pkl')
+            model2 = load_model('tuned_rf_pre_BUN_model')
+            model3 = joblib.load('tuned_rf_intra_BUN.pkl')
+            model4 = load_model('tuned_rf_intra_BUN_model')
+            model5 = joblib.load('tuned_rf_post_BUN.pkl')
+            model6 = load_model('tuned_rf_post_BUN_model')
+        
+            pre_weighted_forest = DynamicWeightedForest(model.estimators_)
 
-# 医院选择
-        hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
-        current_model = load_hospital_model(hospital_id)   
-            
+            st.title("Dynamic Weighted Forest with Hospital-Specific Learning")
+            st.sidebar.header("Settings")
 
-        prediction_type = st.sidebar.selectbox(
+    # 医院选择
+            hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
+            current_model = load_hospital_model(hospital_id)     
+
+            prediction_type = st.sidebar.selectbox(
             "How would you like to predict?",
             ("Preoperative_number", "Preoperative_batch", "Intraoperative_number", "Intraoperative_batch", 
              "Postoperative_number", "Postoperative_batch")
-         )
+          )
 
         if prediction_type == "Preoperative_number":
             st.subheader("Preoperative Number Prediction")
