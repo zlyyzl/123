@@ -216,7 +216,7 @@ def prediction_page():
                         self.trees.pop(i)  # Remove the unfitted tree
                         self.tree_weights = np.delete(self.tree_weights, i)
 
-    self.tree_weights /= np.sum(self.tree_weights)
+                self.tree_weights /= np.sum(self.tree_weights)
 
             def add_tree(self, new_tree):
                 if hasattr(new_tree, "tree_"):  # Check if the new tree is fitted
