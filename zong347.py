@@ -225,24 +225,15 @@ def prediction_page():
                     return joblib.load(model_name)
                 return None
         
-        # 根据医院 ID 加载模型
         def load_model_for_hospital(hospital_id):
             model_file = f'{hospital_id}_dynamic_weighted_forest.pkl'
             return DynamicWeightedForest.load_model_from_file(model_file)
-        
-        # Streamlit 应用设置
-        st.title('Functional Outcome Prediction App for Patients with Posterior Circulation Large Vessel Occlusion After Mechanical Thrombectomy')
-        
-        # 选择医院
         hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
-        
-        # 加载初始模型
+
         model = joblib.load('tuned_rf_pre_BUN.pkl')
         
-        # 初始化预加权森林，默认为 None
         pre_weighted_forest = None
         
-        # 选择预测类型
         prediction_type = st.sidebar.selectbox(
             "How would you like to predict?",
             ("Preoperative_number", "Preoperative_batch", "Intraoperative_number", "Intraoperative_batch",
@@ -250,15 +241,13 @@ def prediction_page():
         )
         
         def st_shap(plot, height=None):
-            """将 SHAP 图形嵌入 Streamlit 应用"""
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
             components.html(shap_html, height=height)
         
         if prediction_type == "Preoperative_number":
             st.subheader("Preoperative Number Prediction")
             st.write("Please fill in the blanks with corresponding data.")
-        
-            # 输入特征
+
             NIHSS = st.number_input('NIHSS', min_value=4, max_value=38, value=10)
             GCS = st.number_input('GCS', min_value=0, max_value=15, value=10)
             pre_eGFR = st.number_input('pre_eGFR', min_value=10.00, max_value=250.00, value=111.5)
@@ -279,22 +268,20 @@ def prediction_page():
         
             input_df = pd.DataFrame([features])
         
-            # 进行预测
             if st.button('Predict'):
                 if pre_weighted_forest is None:
-                    # 使用初始模型进行预测
                     output = model.predict_proba(input_df)[:, 1]
-                    explainer = shap.Explainer(model)  # 使用初始模型的解释器
+                    explainer = shap.Explainer(model)  
                     shap_values = explainer(input_df)
                     st.write('This prediction is based on the initial model.')
                 else:
-                    # 使用增量学习后的模型进行预测
                     output = pre_weighted_forest.predict_proba(input_df)[:, 1]
-                    explainer = shap.Explainer(pre_weighted_forest)  # 使用增量学习模型的解释器
+                    explainer = shap.Explainer(pre_weighted_forest)  
                     shap_values = explainer(input_df)
                     st.write('This prediction is based on the updated model with weighted learning.')
         
                 st.write('Based on feature values, predicted probability of good functional outcome is ' + str(output[0]))
+                
                 st_shap(shap.force_plot(explainer.expected_value[1], shap_values[:, 1], input_df))
         
                 shap_df = pd.DataFrame({
@@ -304,20 +291,16 @@ def prediction_page():
                 st.write("SHAP values for each feature:")
                 st.dataframe(shap_df)
         
-                # 添加数据用于增量学习
                 label = st.selectbox('Outcome for Learning', [0, 1])
                 if st.button('Add Data for Learning'):
                     new_tree = DecisionTreeClassifier(random_state=42)
                     new_tree.fit(input_df, [label])
-                    # 如果没有预加权森林，则初始化
                     if pre_weighted_forest is None:
-                        pre_weighted_forest = DynamicWeightedForest(model.estimators_)  # 使用初始模型创建
+                        pre_weighted_forest = DynamicWeightedForest(model.estimators_)  
                     pre_weighted_forest.add_tree(new_tree)
                     pre_weighted_forest.update_weights(input_df, [label])
-                    pre_weighted_forest.save_model(f'{hospital_id}_dynamic_weighted_forest.pkl')  # 动态保存
-                    st.success("New tree added and weights updated dynamically! Model saved successfully.")
-
-                       
+                    pre_weighted_forest.save_model(f'{hospital_id}_dynamic_weighted_forest.pkl')  
+                    st.success("New tree added and weights updated dynamically! Model saved successfully.")                  
 
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
