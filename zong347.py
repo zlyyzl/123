@@ -203,12 +203,14 @@ def prediction_page():
 
             def predict_proba(self, X):
                 weighted_votes = np.zeros((X.shape[0], 2))
+                valid_trees = []
                 for i, tree in enumerate(self.trees):
                     if hasattr(tree, "tree_"):
+                        valid_trees.append(tree)
                         proba = tree.predict_proba(X)
                         weighted_votes += self.tree_weights[i] * proba
-                    else:
-                        st.warning(f"Tree {i} is not fitted and will be ignored for prediction.")
+                if len(valid_trees) == 0:
+                    raise ValueError("No fitted trees available for making predictions.")
                 return weighted_votes / np.sum(self.tree_weights) if np.sum(self.tree_weights) > 0 else None
 
             def update_weights(self, X, y):
