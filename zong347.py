@@ -237,11 +237,13 @@ def prediction_page():
             if hospital_id not in hospital_models:
                 hospital_model = DynamicWeightedForest.load_model(model_file)
                 if hospital_model is None or len(hospital_model.trees) == 0:
-                    base_trees = [DecisionTreeClassifier(random_state=42)]
-                    hospital_model = DynamicWeightedForest(base_trees)
+                    base_tree = DecisionTreeClassifier(random_state=42)
+                    hospital_model = DynamicWeightedForest([base_tree])  
                 else:
                     hospital_model.trees = [tree for tree in hospital_model.trees if hasattr(tree, "tree_")]
+                
                 hospital_models[hospital_id] = hospital_model
+            
             return hospital_models[hospital_id]
         
         
@@ -310,33 +312,41 @@ def prediction_page():
             input_df = pd.DataFrame([features]) 
             print(input_df) 
             shap_df = None 
-            
-            if st.button('Predict'): 
-                output = current_model.predict_proba(input_df)[:, 1]
-                if len(current_model.trees) == 0 or all(not hasattr(tree, "tree_") for tree in current_model.trees):
-                    st.warning("No fitted trees are available for SHAP explainer.")
-                else:
-                    explainer = shap.Explainer(current_model.trees[0])
-                    shap_values = explainer.shap_values(input_df)
-                    st.write(' Based on feature values, predicted probability of good functional outcome is ' + str(output))
-                    st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], input_df))
-                    st.write(' Based on feature values, predicted possibility of good functional outcome is '+ str(output))
-                    st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1],input_df))
-                    shap_df = pd.DataFrame({
+
+
+            if st.button('Predict'):
+                try:
+                    if len(current_model.trees) == 0 or all(not hasattr(tree, "tree_") for tree in current_model.trees):
+                        st.warning("No fitted trees available for making predictions.")
+                    else:
+                        output = current_model.predict_proba(input_df)[:, 1]
+                        explainer = shap.Explainer(current_model.trees[0])
+                        shap_values = explainer.shap_values(input_df)
+                        st.write(' Based on feature values, predicted probability of good functional outcome is ' + str(output))
+                        st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], input_df))
+                        shap_df = pd.DataFrame({
                         'Feature': input_df.columns,
                         'SHAP Value': shap_values[1].flatten() 
                      })
-
-                st.write("SHAP values for each feature:")
-                st.dataframe(shap_df)
-            label = st.selectbox('Outcome for Learning', [0, 1])
-            if st.button('Add Data for Learning'): 
-                new_tree = DecisionTreeClassifier(random_state=42)
-                new_tree.fit(input_df, [label])
-                current_model.add_tree(new_tree)
-                current_model.update_weights(input_df, [label])
-                save_hospital_model(hospital_id, current_model)
-                st.success(f"Updated model for {hospital_id} and saved successfully!")
+                        
+                        st.write("SHAP values for each feature:")
+                        st.dataframe(shap_df)
+                except Exception as e:
+                    st.error(f"Error during prediction: {e}")
+            
+            if st.button('Add Data for Learning'):
+                try:
+                    new_tree = DecisionTreeClassifier(random_state=42)
+                    new_tree.fit(input_df, [label])  
+                    current_model.add_tree(new_tree)
+                    current_model.update_weights(input_df, [label])
+                    save_hospital_model(hospital_id, current_model)
+                    st.success(f"Updated model for {hospital_id} and saved successfully!")
+                except ValueError as e:
+                    st.error(f"Failed to train new tree: {e}")
+                except Exception as e:
+                    st.error(f"An error occurred while updating the model: {e}")
+            
                 
             st.subheader("Sensitivity Analysis")
             selected_feature = st.selectbox("Select feature to analyze:", input_df.columns)
