@@ -308,6 +308,9 @@ def prediction_page():
                         current_model.update_weights(input_df, [label])  
                         current_model.save_model(f'{hospital_id}_weighted_forest.pkl')  
                         st.success("New tree added and weights updated dynamically! Model saved successfully.")
+                        st.write(f"Number of trees after update: {len(current_model.trees)}")
+                        st.write(f"Tree weights after update: {current_model.tree_weights}")
+
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
 
