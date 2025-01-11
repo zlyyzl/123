@@ -186,7 +186,7 @@ def prediction_page():
         
     elif page == "Prediction":
         st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
-    
+        
         model = joblib.load('tuned_rf_pre_BUN.pkl')
         model2 = load_model('tuned_rf_pre_BUN_model')
         model3 = joblib.load('tuned_rf_intra_BUN.pkl')
@@ -210,13 +210,13 @@ def prediction_page():
                     predictions = tree.predict(X)
                     accuracy = np.mean(predictions == y)
                     self.tree_weights[i] = accuracy
-                    self.tree_weights /= np.sum(self.tree_weights)  
+                self.tree_weights /= np.sum(self.tree_weights)  
 
             def add_tree(self, new_tree):
                 self.trees.append(new_tree)
                 self.tree_weights = np.append(self.tree_weights, [1.0])
                 self.tree_weights /= np.sum(self.tree_weights)                                 
-              
+
             def save_model(self, model_name):
                 with open(model_name, 'wb') as file:
                     joblib.dump(self, file)
@@ -239,25 +239,25 @@ def prediction_page():
                 hospital_models[hospital_id] = hospital_model
             return hospital_models[hospital_id]
 
-         def save_hospital_model(hospital_id, model):
-             model_file = f'{hospital_id}_weighted_forest.pkl'
-             model.save_model(model_file)
-    
+        def save_hospital_model(hospital_id, model):
+            model_file = f'{hospital_id}_weighted_forest.pkl'
+            model.save_model(model_file)
+
         def st_shap(plot, height=None):
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
             components.html(shap_html, height=height)
-            
-            st.title("Dynamic Weighted Forest with Hospital-Specific Learning")
-            st.sidebar.header("Settings")
 
-            hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
-            current_model = load_hospital_model(hospital_id)     
+        st.title("Dynamic Weighted Forest with Hospital-Specific Learning")
+        st.sidebar.header("Settings")
 
-            prediction_type = st.sidebar.selectbox(
+        hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
+        current_model = load_hospital_model(hospital_id)     
+
+        prediction_type = st.sidebar.selectbox(
             "How would you like to predict?",
             ("Preoperative_number", "Preoperative_batch", "Intraoperative_number", "Intraoperative_batch", 
              "Postoperative_number", "Postoperative_batch")
-          )
+        )
 
         if prediction_type == "Preoperative_number":
             st.subheader("Preoperative Number Prediction")
