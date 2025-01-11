@@ -268,13 +268,8 @@ def prediction_page():
         model5 = joblib.load('tuned_rf_post_BUN.pkl')
         model6 = load_model('tuned_rf_post_BUN_model')
 
-        
-        
-        
-        # 主代码中调用
         hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
         current_model = load_hospital_model(hospital_id)
-
 
     
         def st_shap(plot):
@@ -333,7 +328,7 @@ def prediction_page():
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
                     
-            label = st.selectbox('Outcome for Learning', [0, 1])  # 必须独立于按钮
+            label = st.selectbox('Outcome for Learning', [0, 1])  
             if st.button('Add Data for Learning'): 
                 try:
                     new_tree = DecisionTreeClassifier(random_state=42)
