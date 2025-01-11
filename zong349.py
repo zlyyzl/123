@@ -297,7 +297,6 @@ def prediction_page():
     
             if st.button('Predict'): 
                 try:
-                    # 预测逻辑
                     output = current_model.predict_proba(input_df)[:, 1]
                     explainer = shap.Explainer(current_model)  
                     shap_values, expected_value = current_model.get_weighted_shap_values(input_df)
@@ -311,39 +310,20 @@ def prediction_page():
                     })
                     st.write("SHAP values for each feature:")
                     st.dataframe(shap_df)
-            
-                    # 增量学习部分逻辑
-                    label = st.selectbox('Outcome for Learning', [0, 1])
-            
-                    # 使用 session_state 保存按钮状态
-                    if 'add_data_clicked' not in st.session_state:
-                        st.session_state['add_data_clicked'] = False
-            
-                    if st.button('Add Data for Learning'):
-                        st.session_state['add_data_clicked'] = True
-            
-                    if st.session_state['add_data_clicked']:
-                        st.write("Add Data for Learning button clicked!")  # 验证逻辑触发
-                        try:
-                            # 增量学习逻辑
-                            st.write("Starting to add new tree to the model.")
-                            new_tree = DecisionTreeClassifier(random_state=42)
-                            st.write("Initialized new Decision Tree.")
-                            new_tree.fit(input_df, [label])
-                            st.write("Fitted new tree with input data.")
-                            current_model.add_tree(new_tree)
-                            st.write("Added new tree to the model.")
-                            current_model.update_weights(input_df, [label])
-                            st.write("Updated tree weights.")
-                            current_model.save_model(f'{hospital_id}_weighted_forest.pkl')
-                            st.success("New tree added and weights updated dynamically! Model saved successfully.")
-                        except Exception as e:
-                            st.error(f"Error during model update: {e}")
                 except Exception as e:
-                    # 捕获整个预测部分的异常
                     st.error(f"Error during prediction: {e}")
-
-
+                    
+            label = st.selectbox('Outcome for Learning', [0, 1])  # 必须独立于按钮
+            if st.button('Add Data for Learning'): 
+                try:
+                    new_tree = DecisionTreeClassifier(random_state=42)
+                    new_tree.fit(input_df, [label])
+                    current_model.add_tree(new_tree)
+                    current_model.update_weights(input_df, [label])
+                    current_model.save_model(f'{hospital_id}_weighted_forest.pkl')
+                    st.success("New tree added and weights updated dynamically! Model saved successfully.")
+                except Exception as e:
+                    st.error(f"Error during model update: {e}")
 
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
