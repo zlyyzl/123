@@ -291,7 +291,7 @@ def prediction_page():
                     shap_values, expected_value = current_model.get_weighted_shap_values(input_df)
     
                     st.write('Based on feature values, predicted probability of good functional outcome is: ' + str(output))
-                    st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], input_df))
+                    st_shap(shap.force_plot(expected_value, shap_values[0], input_df))
     
                     shap_df = pd.DataFrame({
                         'Feature': input_df.columns,
