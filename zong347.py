@@ -303,17 +303,10 @@ def prediction_page():
                     label = st.selectbox('Outcome for Learning', [0, 1])  
                     if st.button('Add Data for Learning'):
                         new_tree = DecisionTreeClassifier(random_state=42)
-                        st.write("Initialized new Decision Tree.")  # 添加此行
                         new_tree.fit(input_df, [label])
-                        st.write("Fitted new tree with input data.")  # 添加此行
-                        current_model.add_tree(new_tree)
-                        st.write("Added new tree to the model.")  # 添加此行
-                        current_model.update_weights(input_df, [label])
-                        st.write("Updated tree weights.")  # 添加此行
-                        current_model.save_model(f'{hospital_id}_weighted_forest.pkl')
-                        st.success("New tree added and weights updated dynamically! Model saved successfully.")
-                except Exception as e:
-                    st.error(f"Error during prediction: {e}")
+                        pre_weighted_forest.add_tree(new_tree)
+                        pre_weighted_forest.update_weights(input_df, [label])
+                        st.success("New tree added and weights updated dynamically!")
 
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
