@@ -268,10 +268,14 @@ def prediction_page():
         model4 = load_model('tuned_rf_intra_BUN_model')
         model5 = joblib.load('tuned_rf_post_BUN.pkl')
         model6 = load_model('tuned_rf_post_BUN_model')
-
+        preprocessing_steps = model2.steps[:-1]  
+        def create_pipeline_with_current_model(current_model):
+            pipeline_steps = preprocessing_steps + [('final_model', current_model)]
+            pipeline = Pipeline(steps=pipeline_steps)
+            return pipeline
+            
         hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
         current_model = load_hospital_model(hospital_id)
-        preprocessing_steps = model2.steps[:-1]  
         current_pipeline = create_pipeline_with_current_model(current_model)
 
         def create_pipeline_with_current_model(current_model):
