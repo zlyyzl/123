@@ -296,25 +296,36 @@ def prediction_page():
             print(input_df) 
     
             if st.button('Predict'): 
-                output = model.predict_proba(input_df)[:,1] 
-                explainer = shap.Explainer(model)
-                shap_values = explainer.shap_values(input_df)
-                st.write(' Based on feature values, predicted possibility of good functional outcome is '+ str(output))
-                st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1],input_df))
-                shap_df = pd.DataFrame({
-                    'Feature': input_df.columns,
-                    'SHAP Value': shap_values[1].flatten() 
-                 })
-
-                st.write("SHAP values for each feature:")
-                st.dataframe(shap_df)
+                try:
+                    output = current_model.predict_proba(input_df)[:, 1]
+                    explainer = shap.Explainer(current_model)  
+                    shap_values, expected_value = current_model.get_weighted_shap_values(input_df)
+    
+                    st.write('Based on feature values, predicted probability of good functional outcome is: ' + str(output))
+                    st_shap(shap.force_plot(expected_value, shap_values[0], input_df))
+    
+                    shap_df = pd.DataFrame({
+                        'Feature': input_df.columns,
+                        'SHAP Value': shap_values[0]
+                    })
+                    st.write("SHAP values for each feature:")
+                    st.dataframe(shap_df)
             label = st.selectbox('Outcome for Learning', [0, 1])
             if st.button('Add Data for Learning'): 
-                new_tree = DecisionTreeClassifier(random_state=42)
-                new_tree.fit(input_df, [label])
-                pre_weighted_forest.add_tree(new_tree)
-                pre_weighted_forest.update_weights(input_df, [label])
-                st.success("New tree added and weights updated dynamically!")
+                    st.write("Button clicked!")  # 验证点击事件是否触发
+                    try:
+                        new_tree = DecisionTreeClassifier(random_state=42)
+                        st.write("Initialized new Decision Tree.")
+                        new_tree.fit(input_df, [label])
+                        st.write("Fitted new tree with input data.")
+                        current_model.add_tree(new_tree)
+                        st.write("Added new tree to the model.")
+                        current_model.update_weights(input_df, [label])
+                        st.write("Updated tree weights.")
+                        current_model.save_model(f'{hospital_id}_weighted_forest.pkl')
+                        st.success("New tree added and weights updated dynamically! Model saved successfully.")
+                    except Exception as e:
+                        st.error(f"Error during model update: {e}")
 
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
