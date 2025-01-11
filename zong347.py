@@ -220,13 +220,32 @@ def prediction_page():
                 self.tree_weights = np.append(self.tree_weights, [1.0])
                 self.tree_weights /= np.sum(self.tree_weights)                                 
                 
-            def save_model(model, model_name):
-                joblib.dump(model, model_name)
+            def save_model(self, model_name):
+                with open(model_name, 'wb') as file:
+                    joblib.dump(self, file)
 
-            def load_model_from_file(model_name):
+            @staticmethod
+            def load_model(model_name):
                 if os.path.exists(model_name):
-                    return joblib.load(model_name)
+                    with open(model_name, 'rb') as file:
+                        return joblib.load(file)
                 return None
+
+        hospital_models = {}
+
+        def load_hospital_model(hospital_id):
+            model_file = f'{hospital_id}_weighted_forest.pkl'
+            if hospital_id not in hospital_models:
+                hospital_model = DynamicWeightedForest.load_model(model_file)
+                if hospital_model is None:
+                    base_trees = [DecisionTreeClassifier(random_state=42)]  # 默认空模型
+                    hospital_model = DynamicWeightedForest(base_trees)
+                hospital_models[hospital_id] = hospital_model
+            return hospital_models[hospital_id]
+
+        def save_hospital_model(hospital_id, model):
+            model_file = f'{hospital_id}_weighted_forest.pkl'
+            model.save_model(model_file)
 
         pre_weighted_forest = DynamicWeightedForest(model.estimators_)
         
@@ -235,11 +254,19 @@ def prediction_page():
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
             components.html(shap_html, height=height)
 
+
+        st.sidebar.header("Settings")
+
+# 医院选择
+        hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
+        current_model = load_hospital_model(hospital_id)
+
         prediction_type = st.sidebar.selectbox(
             "How would you like to predict?",
             ("Preoperative_number", "Preoperative_batch", "Intraoperative_number", "Intraoperative_batch", 
              "Postoperative_number", "Postoperative_batch")
          )
+    
 
         if prediction_type == "Preoperative_number":
             st.subheader("Preoperative Number Prediction")
@@ -271,8 +298,8 @@ def prediction_page():
             shap_df = None 
             
             if st.button('Predict'): 
-                output = model.predict_proba(input_df)[:,1] 
-                explainer = shap.Explainer(model)
+                output = current_model.predict_proba(input_df)[:, 1]
+                explainer = shap.Explainer(current_model.trees[0])
                 shap_values = explainer.shap_values(input_df)
                 st.write(' Based on feature values, predicted possibility of good functional outcome is '+ str(output))
                 st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1],input_df))
@@ -287,9 +314,11 @@ def prediction_page():
             if st.button('Add Data for Learning'): 
                 new_tree = DecisionTreeClassifier(random_state=42)
                 new_tree.fit(input_df, [label])
-                pre_weighted_forest.add_tree(new_tree)
-                pre_weighted_forest.update_weights(input_df, [label])
-                st.success("New tree added and weights updated dynamically!")
+                current_model.add_tree(new_tree)
+                current_model.update_weights(input_df, [label])
+                save_hospital_model(hospital_id, current_model)
+                st.success(f"Updated model for {hospital_id} and saved successfully!")
+                
             st.subheader("Sensitivity Analysis")
             selected_feature = st.selectbox("Select feature to analyze:", input_df.columns)
             perturbation = st.number_input("Perturbation range:", min_value=0.0, max_value=20.0, value=2.0)
