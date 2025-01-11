@@ -246,14 +246,14 @@ def prediction_page():
             model_file = f'{hospital_id}_weighted_forest.pkl'
             if hospital_id not in hospital_models:
                 hospital_model = DynamicWeightedForest.load_model(model_file)
-                if hospital_model is None:
-                    base_trees = [DecisionTreeClassifier(random_state=42)]  # 默认为一个未训练的树
+                if hospital_model is None or len(hospital_model.trees) == 0:
+                    base_trees = [DecisionTreeClassifier(random_state=42)] 
                     hospital_model = DynamicWeightedForest(base_trees)
                 else:
                     hospital_model.trees = [tree for tree in hospital_model.trees if hasattr(tree, "tree_")]
-                    hospital_model.tree_weights = hospital_model.tree_weights[[i for i, tree in enumerate(hospital_model.trees) if hasattr(tree, "tree_")]]
                 hospital_models[hospital_id] = hospital_model
             return hospital_models[hospital_id]
+
 
         def save_hospital_model(hospital_id, model):
             model_file = f'{hospital_id}_weighted_forest.pkl'
@@ -269,7 +269,6 @@ def prediction_page():
 
         st.sidebar.header("Settings")
 
-# 医院选择
         hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
         current_model = load_hospital_model(hospital_id)
 
@@ -311,14 +310,19 @@ def prediction_page():
             
             if st.button('Predict'): 
                 output = current_model.predict_proba(input_df)[:, 1]
-                explainer = shap.Explainer(current_model.trees[0])
-                shap_values = explainer.shap_values(input_df)
-                st.write(' Based on feature values, predicted possibility of good functional outcome is '+ str(output))
-                st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1],input_df))
-                shap_df = pd.DataFrame({
-                    'Feature': input_df.columns,
-                    'SHAP Value': shap_values[1].flatten() 
-                 })
+                if len(current_model.trees) == 0 or all(not hasattr(tree, "tree_") for tree in current_model.trees):
+                    st.warning("No fitted trees are available for SHAP explainer.")
+                else:
+                    explainer = shap.Explainer(current_model.trees[0])
+                    shap_values = explainer.shap_values(input_df)
+                    st.write(' Based on feature values, predicted probability of good functional outcome is ' + str(output))
+                    st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], input_df))
+                    st.write(' Based on feature values, predicted possibility of good functional outcome is '+ str(output))
+                    st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1],input_df))
+                    shap_df = pd.DataFrame({
+                        'Feature': input_df.columns,
+                        'SHAP Value': shap_values[1].flatten() 
+                     })
 
                 st.write("SHAP values for each feature:")
                 st.dataframe(shap_df)
