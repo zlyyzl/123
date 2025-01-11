@@ -217,14 +217,13 @@ def prediction_page():
             
                 for tree, weight in zip(self.trees, self.tree_weights):
                     explainer = shap.TreeExplainer(tree)
-                    shap_values_tree = explainer.shap_values(X)[1]  # 解释正类
+                    shap_values_tree = explainer.shap_values(X)[1]  # 正类的 SHAP 值
                     expected_value_tree = explainer.expected_value[1]
             
                     shap_values_sum += weight * shap_values_tree
                     expected_value_sum += weight * expected_value_tree
             
                 return shap_values_sum, expected_value_sum
-
 
     
             def update_weights(self, X, y):
