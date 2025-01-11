@@ -204,9 +204,12 @@ def prediction_page():
             def predict_proba(self, X):
                 weighted_votes = np.zeros((X.shape[0], 2))
                 for i, tree in enumerate(self.trees):
-                    proba = tree.predict_proba(X)
-                    weighted_votes += self.tree_weights[i] * proba
-                return weighted_votes / np.sum(self.tree_weights)
+                    if hasattr(tree, "tree_"):
+                        proba = tree.predict_proba(X)
+                        weighted_votes += self.tree_weights[i] * proba
+                    else:
+                        st.warning(f"Tree {i} is not fitted and will be ignored for prediction.")
+                return weighted_votes / np.sum(self.tree_weights) if np.sum(self.tree_weights) > 0 else None
 
             def update_weights(self, X, y):
                 for i, tree in enumerate(self.trees):
@@ -216,10 +219,14 @@ def prediction_page():
                     self.tree_weights /= np.sum(self.tree_weights)  
 
             def add_tree(self, new_tree):
-                self.trees.append(new_tree)
-                self.tree_weights = np.append(self.tree_weights, [1.0])
-                self.tree_weights /= np.sum(self.tree_weights)                                 
-                
+                if hasattr(new_tree, "tree_"):  
+                    self.trees.append(new_tree)
+                    self.tree_weights = np.append(self.tree_weights, [1.0])
+                    self.tree_weights /= np.sum(self.tree_weights)
+                else:
+                    raise ValueError("The new tree must be fitted before being added.")
+                       
+               
             def save_model(self, model_name):
                 with open(model_name, 'wb') as file:
                     joblib.dump(self, file)
@@ -232,14 +239,17 @@ def prediction_page():
                 return None
 
         hospital_models = {}
-
+        
         def load_hospital_model(hospital_id):
             model_file = f'{hospital_id}_weighted_forest.pkl'
             if hospital_id not in hospital_models:
                 hospital_model = DynamicWeightedForest.load_model(model_file)
                 if hospital_model is None:
-                    base_trees = [DecisionTreeClassifier(random_state=42)]  # 默认空模型
+                    base_trees = [DecisionTreeClassifier(random_state=42)]  # 默认为一个未训练的树
                     hospital_model = DynamicWeightedForest(base_trees)
+                else:
+                    hospital_model.trees = [tree for tree in hospital_model.trees if hasattr(tree, "tree_")]
+                    hospital_model.tree_weights = hospital_model.tree_weights[[i for i, tree in enumerate(hospital_model.trees) if hasattr(tree, "tree_")]]
                 hospital_models[hospital_id] = hospital_model
             return hospital_models[hospital_id]
 
