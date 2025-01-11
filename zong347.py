@@ -199,7 +199,15 @@ def prediction_page():
             def __init__(self, base_trees):
                 self.trees = base_trees
                 self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
-    
+        
+            def __call__(self, X):
+                """Returns the probabilities of each class."""
+                weighted_votes = np.zeros((X.shape[0], 2))
+                for i, tree in enumerate(self.trees):
+                    proba = tree.predict_proba(X)
+                    weighted_votes += self.tree_weights[i] * proba
+                return weighted_votes / np.sum(self.tree_weights)
+
             def predict_proba(self, X):
                 weighted_votes = np.zeros((X.shape[0], 2))
                 for i, tree in enumerate(self.trees):
