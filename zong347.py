@@ -302,6 +302,7 @@ def prediction_page():
     
                     label = st.selectbox('Outcome for Learning', [0, 1])  
                     if st.button('Add Data for Learning'):
+                        st.write("Button clicked!")  # 验证点击事件是否触发
                         new_tree = DecisionTreeClassifier(random_state=42)
                         st.write("Initialized new Decision Tree.")  # 添加此行
                         new_tree.fit(input_df, [label])
