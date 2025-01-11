@@ -22,10 +22,6 @@ import streamlit.components.v1 as components
 import openpyxl
 import os
 
-if 'new_data' not in st.session_state:
-    st.session_state['new_data'] = pd.DataFrame(columns=[
-        'NIHSS', 'GCS', 'pre_eGFR', 'pre_glucose', 'PC_ASPECTS', 'Age', 'pre_BUN', 'label'
-    ])
 
 class DynamicWeightedForest:
     def __call__(self, X):
@@ -315,7 +311,9 @@ def prediction_page():
 
             input_df = pd.DataFrame([features]) 
             print(input_df) 
-    
+            if 'new_data' not in st.session_state:
+                st.session_state['new_data'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
+
             if st.button('Predict'): 
                 try:
                     output = current_model.predict_proba(input_df)
