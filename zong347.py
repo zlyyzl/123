@@ -224,12 +224,13 @@ def prediction_page():
                 if os.path.exists(model_name):
                     return joblib.load(model_name)
                 return None
-        
+                
         def load_model_for_hospital(hospital_id):
             model_file = f'{hospital_id}_dynamic_weighted_forest.pkl'
             return DynamicWeightedForest.load_model_from_file(model_file)
+        
         hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
-
+        
         model = joblib.load('tuned_rf_pre_BUN.pkl')
         
         pre_weighted_forest = None
@@ -247,7 +248,7 @@ def prediction_page():
         if prediction_type == "Preoperative_number":
             st.subheader("Preoperative Number Prediction")
             st.write("Please fill in the blanks with corresponding data.")
-
+        
             NIHSS = st.number_input('NIHSS', min_value=4, max_value=38, value=10)
             GCS = st.number_input('GCS', min_value=0, max_value=15, value=10)
             pre_eGFR = st.number_input('pre_eGFR', min_value=10.00, max_value=250.00, value=111.5)
@@ -281,12 +282,15 @@ def prediction_page():
                     st.write('This prediction is based on the updated model with weighted learning.')
         
                 st.write('Based on feature values, predicted probability of good functional outcome is ' + str(output[0]))
-                
-                st_shap(shap.force_plot(explainer.expected_value[1], shap_values[:, 1], input_df))
+        
+                shap_values_for_plot = shap.Explanation(values=shap_values.values.flatten(), 
+                                                          base_values=explainer.expected_value,
+                                                          data=input_df)
+                st_shap(shap.force_plot(explainer.expected_value, shap_values_for_plot.values, input_df))
         
                 shap_df = pd.DataFrame({
                     'Feature': input_df.columns,
-                    'SHAP Value': shap_values[:, 1].flatten()
+                    'SHAP Value': shap_values.values.flatten()
                 })
                 st.write("SHAP values for each feature:")
                 st.dataframe(shap_df)
@@ -299,8 +303,9 @@ def prediction_page():
                         pre_weighted_forest = DynamicWeightedForest(model.estimators_)  
                     pre_weighted_forest.add_tree(new_tree)
                     pre_weighted_forest.update_weights(input_df, [label])
-                    pre_weighted_forest.save_model(f'{hospital_id}_dynamic_weighted_forest.pkl')  
-                    st.success("New tree added and weights updated dynamically! Model saved successfully.")                  
+                    pre_weighted_forest.save_model(f'{hospital_id}_dynamic_weighted_forest.pkl')  # 动态保存
+                    st.success("New tree added and weights updated dynamically! Model saved successfully.")
+           
 
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
