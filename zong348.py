@@ -207,20 +207,28 @@ def prediction_page():
 
             def update_weights(self, X, y):
                 for i, tree in enumerate(self.trees):
-                    if hasattr(tree, "tree_"):  
+                    if hasattr(tree, "tree_"):  # Ensure the tree is fitted
                         predictions = tree.predict(X)
                         accuracy = np.mean(predictions == y)
                         self.tree_weights[i] = accuracy
                     else:
-                        st.warning(f"Tree {i} not fitted. Skipping updates for this tree.")
-                self.tree_weights /= np.sum(self.tree_weights) 
+                        st.warning(f"Tree {i} not fitted; removing from the list.")
+                        self.trees.pop(i)  # Remove the unfitted tree
+                        self.tree_weights = np.delete(self.tree_weights, i)
+
+    self.tree_weights /= np.sum(self.tree_weights)
 
             def add_tree(self, new_tree):
-                self.trees.append(new_tree)
-                self.tree_weights = np.append(self.tree_weights, [1.0])
-                self.tree_weights /= np.sum(self.tree_weights)                                 
+                if hasattr(new_tree, "tree_"):  # Check if the new tree is fitted
+                    self.trees.append(new_tree)
+                    self.tree_weights = np.append(self.tree_weights, [1.0])
+                    self.tree_weights /= np.sum(self.tree_weights)
+                else:
+                    raise ValueError("The new tree must be fitted before being added.")                           
 
             def save_model(self, model_name):
+    # Remove unfitted trees before saving
+                self.trees = [tree for tree in self.trees if hasattr(tree, "tree_")]
                 with open(model_name, 'wb') as file:
                     joblib.dump(self, file)
 
