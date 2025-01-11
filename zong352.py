@@ -271,7 +271,13 @@ def prediction_page():
 
         hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
         current_model = load_hospital_model(hospital_id)
+        preprocessing_steps = model2.steps[:-1]  
+        current_pipeline = create_pipeline_with_current_model(current_model)
 
+        def create_pipeline_with_current_model(current_model):
+            pipeline_steps = preprocessing_steps + [('final_model', current_model)]
+            pipeline = Pipeline(steps=pipeline_steps)
+            return pipeline
     
         def st_shap(plot):
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
@@ -414,9 +420,7 @@ def prediction_page():
 
                     if 'MRSI' in data.columns: 
                         y_true = data['MRSI'].values 
-                        imputer = SimpleImputer(strategy='mean')
-                        data_imputed = imputer.fit_transform(data)
-                        predictions = current_model.predict_proba(data_imputed)[:, 1]
+                        predictions = current_pipeline.predict_proba(data)
                         predictions_df = pd.DataFrame(predictions, columns=['Predictions']) 
                         st.write(predictions)
                         result_data = data.copy() 
@@ -434,7 +438,7 @@ def prediction_page():
                         if st.button('Add Data for Learning'): 
                             X = data.drop(columns=['MRSI']) 
                             y = data['MRSI'] 
-                            rf_model2 = model2.named_steps['trained_model']
+                            rf_model2 = current_pipeline.named_steps['trained_model']
                             pre_weighted_forest2 = DynamicWeightedForest(rf_model2.estimators_)
                             new_tree = DecisionTreeClassifier(random_state=42)
                             new_tree.fit(X, y) 
