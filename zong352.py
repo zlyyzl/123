@@ -279,9 +279,17 @@ def prediction_page():
         current_pipeline = create_pipeline_with_current_model(current_model)
 
         def create_pipeline_with_current_model(current_model):
-            pipeline_steps = preprocessing_steps + [('final_model', current_model)]
-            pipeline = Pipeline(steps=pipeline_steps)
-            return pipeline
+            st.write("Preprocessing steps from model2:", preprocessing_steps)
+            st.write("Current model type:", type(current_model))
+        
+            try:
+                pipeline_steps = preprocessing_steps + [('final_model', current_model)]
+                st.write("Pipeline steps:", pipeline_steps)  
+                pipeline = Pipeline(steps=pipeline_steps)
+                return pipeline
+            except Exception as e:
+                st.error(f"Error creating pipeline: {e}")
+                return None
     
         def st_shap(plot):
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
