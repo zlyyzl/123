@@ -194,21 +194,18 @@ def prediction_page():
         model4 = load_model('tuned_rf_intra_BUN_model')
         model5 = joblib.load('tuned_rf_post_BUN.pkl')
         model6 = load_model('tuned_rf_post_BUN_model')
-
+    
         class DynamicWeightedForest:
             def __init__(self, base_trees):
                 self.trees = base_trees
                 self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
-        
+    
             def predict_proba(self, X):
                 weighted_votes = np.zeros((X.shape[0], 2))
                 for i, tree in enumerate(self.trees):
                     proba = tree.predict_proba(X)
                     weighted_votes += self.tree_weights[i] * proba
                 return weighted_votes / np.sum(self.tree_weights)
-        
-            def predict(self, X):  # Add this method for SHAP compatibility
-                return np.argmax(self.predict_proba(X), axis=1)
     
             def update_weights(self, X, y):
                 for i, tree in enumerate(self.trees):
@@ -270,22 +267,19 @@ def prediction_page():
     
             if st.button('Predict'):
                 try:
-                    output = current_model.predict_proba(input_df)[:, 1]  # This will still work
-                    explainer = shap.Explainer(current_model)  # Now you can use the whole model
-                    shap_values = explainer(input_df)
-            
+                    output = current_model.predict_proba(input_df)[:, 1]
+                    explainer = shap.Explainer(current_model.trees)  
+                    shap_values = explainer.shap_values(input_df)
+    
                     st.write('Based on feature values, predicted probability of good functional outcome is: ' + str(output))
-                    st_shap(shap.force_plot(explainer.expected_value[1], shap_values.values[:, 1], input_df))
-            
+                    st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], input_df))
+    
                     shap_df = pd.DataFrame({
                         'Feature': input_df.columns,
-                        'SHAP Value': shap_values.values[:, 1]
+                        'SHAP Value': shap_values[1].flatten()
                     })
                     st.write("SHAP values for each feature:")
                     st.dataframe(shap_df)
-                except Exception as e:
-                    st.error(f"Error during prediction: {e}")
-
     
                     label = st.selectbox('Outcome for Learning', [0, 1])  
                     if st.button('Add Data for Learning'):
