@@ -311,8 +311,9 @@ def prediction_page():
                     st.write("SHAP values for each feature:")
                     st.dataframe(shap_df)
                     label = st.selectbox('Outcome for Learning', [0, 1])
+
                     if st.button('Add Data for Learning'): 
-                        st.write("Button clicked!")  # 验证点击事件是否触发
+                        st.write("Add Data for Learning button clicked!")  
                         try:
                             new_tree = DecisionTreeClassifier(random_state=42)
                             st.write("Initialized new Decision Tree.")
