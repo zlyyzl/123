@@ -188,29 +188,19 @@ def prediction_page():
     elif page == "Prediction":
         st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
     
-        model = joblib.load('tuned_rf_pre_BUN.pkl')
-        model2 = load_model('tuned_rf_pre_BUN_model')
-        model3 = joblib.load('tuned_rf_intra_BUN.pkl')
-        model4 = load_model('tuned_rf_intra_BUN_model')
-        model5 = joblib.load('tuned_rf_post_BUN.pkl')
-        model6 = load_model('tuned_rf_post_BUN_model')
-        
-
         class DynamicWeightedForest:
             def __init__(self, base_trees):
                 self.trees = base_trees
-                self.tree_weights = np.ones(len(self.trees)) / len(self.trees)  
+                self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
 
             def predict_proba(self, X):
                 weighted_votes = np.zeros((X.shape[0], 2))
-                valid_trees = []
-                for i, tree in enumerate(self.trees):
-                    if hasattr(tree, "tree_"):
-                        valid_trees.append(tree)
-                        proba = tree.predict_proba(X)
-                        weighted_votes += self.tree_weights[i] * proba
+                valid_trees = [tree for tree in self.trees if hasattr(tree, "tree_")]  # Ensure trees are trained
                 if len(valid_trees) == 0:
                     raise ValueError("No fitted trees available for making predictions.")
+                for i, tree in enumerate(valid_trees):
+                    proba = tree.predict_proba(X)
+                    weighted_votes += self.tree_weights[i] * proba
                 return weighted_votes / np.sum(self.tree_weights) if np.sum(self.tree_weights) > 0 else None
 
             def update_weights(self, X, y):
@@ -218,27 +208,27 @@ def prediction_page():
                     predictions = tree.predict(X)
                     accuracy = np.mean(predictions == y)
                     self.tree_weights[i] = accuracy
-                    self.tree_weights /= np.sum(self.tree_weights)  
-
+                self.tree_weights /= np.sum(self.tree_weights)
+        
             def add_tree(self, new_tree):
-                if hasattr(new_tree, "tree_"):  
+                if hasattr(new_tree, "tree_"):
                     self.trees.append(new_tree)
                     self.tree_weights = np.append(self.tree_weights, [1.0])
                     self.tree_weights /= np.sum(self.tree_weights)
                 else:
                     raise ValueError("The new tree must be fitted before being added.")
-                       
-               
+        
             def save_model(self, model_name):
                 with open(model_name, 'wb') as file:
                     joblib.dump(self, file)
-
+        
             @staticmethod
             def load_model(model_name):
                 if os.path.exists(model_name):
                     with open(model_name, 'rb') as file:
                         return joblib.load(file)
                 return None
+
 
         hospital_models = {}
         
@@ -247,17 +237,30 @@ def prediction_page():
             if hospital_id not in hospital_models:
                 hospital_model = DynamicWeightedForest.load_model(model_file)
                 if hospital_model is None or len(hospital_model.trees) == 0:
-                    base_trees = [DecisionTreeClassifier(random_state=42)] 
+                    base_trees = [DecisionTreeClassifier(random_state=42)]
                     hospital_model = DynamicWeightedForest(base_trees)
                 else:
                     hospital_model.trees = [tree for tree in hospital_model.trees if hasattr(tree, "tree_")]
                 hospital_models[hospital_id] = hospital_model
             return hospital_models[hospital_id]
-
-
+        
+        
         def save_hospital_model(hospital_id, model):
             model_file = f'{hospital_id}_weighted_forest.pkl'
             model.save_model(model_file)
+        
+        
+        def st_shap(plot, height=None):
+            shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
+            components.html(shap_html, height=height)
+            
+        model = joblib.load('tuned_rf_pre_BUN.pkl')
+        model2 = load_model('tuned_rf_pre_BUN_model')
+        model3 = joblib.load('tuned_rf_intra_BUN.pkl')
+        model4 = load_model('tuned_rf_intra_BUN_model')
+        model5 = joblib.load('tuned_rf_post_BUN.pkl')
+        model6 = load_model('tuned_rf_post_BUN_model')
+        
 
         pre_weighted_forest = DynamicWeightedForest(model.estimators_)
         
