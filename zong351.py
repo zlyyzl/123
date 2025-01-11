@@ -314,51 +314,57 @@ def prediction_page():
             if 'new_data' not in st.session_state:
                 st.session_state['new_data'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
 
-            if st.button('Predict'): 
+            if st.button('Predict'):
                 try:
                     output = current_model.predict_proba(input_df)
-
+        
                     if output.shape[1] == 1:
                         st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
                         output = np.hstack([1 - output, output])
-
+        
                     probability = output[:, 1]
                     explainer = shap.Explainer(current_model)
                     shap_values, expected_value = current_model.get_weighted_shap_values(input_df)
-
-                    st.write('Based on feature values, predicted probability of good functional outcome is: ' + str(probability))
+        
+                    st.write(f'Based on feature values, predicted probability of good functional outcome is: {probability[0]:.4f}')
                     st_shap(shap.force_plot(expected_value, shap_values[0], input_df))
-
+        
                     shap_df = pd.DataFrame({
                         'Feature': input_df.columns,
                         'SHAP Value': shap_values[0]
                     })
                     st.write("SHAP values for each feature:")
                     st.dataframe(shap_df)
+        
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
-
-                    
-            label = st.selectbox('Outcome for Learning', [0, 1])  
-            if st.button('Add Data for Learning'): 
+        
+            label = int(st.selectbox('Outcome for Learning', [0, 1]))
+        
+            if st.button('Add Data for Learning'):
                 try:
                     new_data = input_df.copy()
                     new_data['label'] = label
-
                     st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
-
+        
                     accumulated_data = st.session_state['new_data']
                     X = accumulated_data.drop(columns=['label'])
-                    y = accumulated_data['label']
+                    y = accumulated_data['label'].astype(int)  
 
+                    st.write("Accumulated training data preview:")
+                    st.dataframe(accumulated_data)
+                    st.write(f"Features shape: {X.shape}, Labels shape: {y.shape}")
+                    st.write(f"Unique labels in training data: {y.unique()}")
+        
                     new_tree = DecisionTreeClassifier(random_state=42)
                     new_tree.fit(X, y)
-
+        
                     current_model.add_tree(new_tree)
                     current_model.update_weights(X, y)
                     current_model.save_model(f'{hospital_id}_weighted_forest.pkl')
-
+        
                     st.success("New tree added and weights updated dynamically with accumulated data!")
+        
                 except Exception as e:
                     st.error(f"Error during model update: {e}")
 
