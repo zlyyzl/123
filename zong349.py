@@ -192,6 +192,63 @@ def prediction_page():
         model4 = load_model('tuned_rf_intra_BUN_model')
         model5 = joblib.load('tuned_rf_post_BUN.pkl')
         model6 = load_model('tuned_rf_post_BUN_model')
+        class DynamicWeightedForest:
+
+            def __call__(self, X):
+                return self.predict_proba(X)
+                
+            def __init__(self, base_trees):
+                self.trees = base_trees
+                self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
+        
+            def predict_proba(self, X):
+                weighted_votes = np.zeros((X.shape[0], 2))
+                for i, tree in enumerate(self.trees):
+                    proba = tree.predict_proba(X)
+                    weighted_votes += self.tree_weights[i] * proba
+                return weighted_votes / np.sum(self.tree_weights)
+        
+            def get_weighted_shap_values(self, X):
+                shap_values_sum = np.zeros((X.shape[0], X.shape[1]))
+                expected_value_sum = 0
+            
+                for tree, weight in zip(self.trees, self.tree_weights):
+                    explainer = shap.TreeExplainer(tree)
+                    shap_values_tree = explainer.shap_values(X)[1]  # 正类的 SHAP 值
+                    expected_value_tree = explainer.expected_value[1]
+            
+                    shap_values_sum += weight * shap_values_tree
+                    expected_value_sum += weight * expected_value_tree
+            
+                return shap_values_sum, expected_value_sum
+        
+        
+            def update_weights(self, X, y):
+                for i, tree in enumerate(self.trees):
+                    predictions = tree.predict(X)
+                    accuracy = np.mean(predictions == y)
+                    self.tree_weights[i] = accuracy
+                self.tree_weights /= np.sum(self.tree_weights)
+        
+            def add_tree(self, new_tree):
+                self.trees.append(new_tree)
+                self.tree_weights = np.append(self.tree_weights, [1.0])
+                self.tree_weights /= np.sum(self.tree_weights)
+        
+            def save_model(self, model_name):
+                st.write(f"Saving model to {model_name}")  # 打印保存路径
+                joblib.dump(self, model_name)
+            
+            @staticmethod
+            def load_model(model_name):
+                st.write(f"Loading model from {model_name}")  # 打印加载路径
+                if os.path.exists(model_name):
+                    return joblib.load(model_name)
+                else:
+                    st.error(f"Model file {model_name} not found.")
+                    return None
+        
+        
         def load_hospital_model(hospital_id):
             model_file = f'{hospital_id}_weighted_forest.pkl'
             st.write(f"Attempting to load hospital model: {model_file}")
@@ -213,65 +270,11 @@ def prediction_page():
             except Exception as e:
                 st.error(f"Failed to load or create model for {hospital_id}: {e}")
                 return None
-
+        
+        
         hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
         current_model = load_hospital_model(hospital_id)
 
-        class DynamicWeightedForest:
-
-            def __call__(self, X):
-                return self.predict_proba(X)
-                
-            def __init__(self, base_trees):
-                self.trees = base_trees
-                self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
-    
-            def predict_proba(self, X):
-                weighted_votes = np.zeros((X.shape[0], 2))
-                for i, tree in enumerate(self.trees):
-                    proba = tree.predict_proba(X)
-                    weighted_votes += self.tree_weights[i] * proba
-                return weighted_votes / np.sum(self.tree_weights)
-
-            def get_weighted_shap_values(self, X):
-                shap_values_sum = np.zeros((X.shape[0], X.shape[1]))
-                expected_value_sum = 0
-            
-                for tree, weight in zip(self.trees, self.tree_weights):
-                    explainer = shap.TreeExplainer(tree)
-                    shap_values_tree = explainer.shap_values(X)[1]  # 正类的 SHAP 值
-                    expected_value_tree = explainer.expected_value[1]
-            
-                    shap_values_sum += weight * shap_values_tree
-                    expected_value_sum += weight * expected_value_tree
-            
-                return shap_values_sum, expected_value_sum
-
-    
-            def update_weights(self, X, y):
-                for i, tree in enumerate(self.trees):
-                    predictions = tree.predict(X)
-                    accuracy = np.mean(predictions == y)
-                    self.tree_weights[i] = accuracy
-                self.tree_weights /= np.sum(self.tree_weights)
-    
-            def add_tree(self, new_tree):
-                self.trees.append(new_tree)
-                self.tree_weights = np.append(self.tree_weights, [1.0])
-                self.tree_weights /= np.sum(self.tree_weights)
-    
-            def save_model(self, model_name):
-                st.write(f"Saving model to {model_name}")  # 打印保存路径
-                joblib.dump(self, model_name)
-            
-            @staticmethod
-            def load_model(model_name):
-                st.write(f"Loading model from {model_name}")  # 打印加载路径
-                if os.path.exists(model_name):
-                    return joblib.load(model_name)
-                else:
-                    st.error(f"Model file {model_name} not found.")
-                    return None
     
         def st_shap(plot):
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
