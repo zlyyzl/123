@@ -212,14 +212,18 @@ def prediction_page():
                 return weighted_votes / np.sum(self.tree_weights)
 
             def get_weighted_shap_values(self, X):
-
-                shap_values = np.zeros_like(X.values, dtype=float)
-                explainer_values = []
+                shap_values_sum = np.zeros((X.shape[0], X.shape[1]))
+                expected_value_sum = 0
+            
                 for tree, weight in zip(self.trees, self.tree_weights):
                     explainer = shap.TreeExplainer(tree)
-                    tree_shap_values = explainer.shap_values(X)[1]  # 假设解释正类
-                    explainer_values.append(weight * tree_shap_values)
-                return np.sum(explainer_values, axis=0)
+                    shap_values_tree = explainer.shap_values(X)[1]  # 解释正类
+                    expected_value_tree = explainer.expected_value[1]
+            
+                    shap_values_sum += weight * shap_values_tree
+                    expected_value_sum += weight * expected_value_tree
+            
+                return shap_values_sum, expected_value_sum
 
 
     
@@ -285,7 +289,7 @@ def prediction_page():
                 try:
                     output = current_model.predict_proba(input_df)[:, 1]
                     explainer = shap.Explainer(current_model)  
-                    shap_values = current_model.get_weighted_shap_values(input_df)
+                    shap_values, expected_value = current_model.get_weighted_shap_values(input_df)
     
                     st.write('Based on feature values, predicted probability of good functional outcome is: ' + str(output))
                     st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], input_df))
