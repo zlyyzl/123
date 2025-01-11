@@ -183,17 +183,7 @@ def prediction_page():
         image = Image.open('it.tif')
         st.image(image, use_column_width=True)
 
-    elif page == "Prediction":
-        st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
-    
-        model = joblib.load('tuned_rf_pre_BUN.pkl')
-        model2 = load_model('tuned_rf_pre_BUN_model')
-        model3 = joblib.load('tuned_rf_intra_BUN.pkl')
-        model4 = load_model('tuned_rf_intra_BUN_model')
-        model5 = joblib.load('tuned_rf_post_BUN.pkl')
-        model6 = load_model('tuned_rf_post_BUN_model')
-
-        class DynamicWeightedForest:
+    class DynamicWeightedForest:
         
             def __call__(self, X):
                 return self.predict_proba(X)
@@ -272,6 +262,18 @@ def prediction_page():
             except Exception as e:
                 st.error(f"Failed to load or create model for {hospital_id}: {e}")
                 return None
+
+    elif page == "Prediction":
+        st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
+    
+        model = joblib.load('tuned_rf_pre_BUN.pkl')
+        model2 = load_model('tuned_rf_pre_BUN_model')
+        model3 = joblib.load('tuned_rf_intra_BUN.pkl')
+        model4 = load_model('tuned_rf_intra_BUN_model')
+        model5 = joblib.load('tuned_rf_post_BUN.pkl')
+        model6 = load_model('tuned_rf_post_BUN_model')
+
+        
         
         
         # 主代码中调用
