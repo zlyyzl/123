@@ -207,28 +207,28 @@ def prediction_page():
 
             def update_weights(self, X, y):
                 for i, tree in enumerate(self.trees):
-                    if hasattr(tree, "tree_"):  # Ensure the tree is fitted
+                    if hasattr(tree, "tree_"):  
                         predictions = tree.predict(X)
                         accuracy = np.mean(predictions == y)
                         self.tree_weights[i] = accuracy
                     else:
                         st.warning(f"Tree {i} not fitted; removing from the list.")
-                        self.trees.pop(i)  # Remove the unfitted tree
+                        self.trees.pop(i)
                         self.tree_weights = np.delete(self.tree_weights, i)
 
                 self.tree_weights /= np.sum(self.tree_weights)
 
             def add_tree(self, new_tree):
-                if hasattr(new_tree, "tree_"):  # Check if the new tree is fitted
+                if hasattr(new_tree, "tree_"):  
                     self.trees.append(new_tree)
                     self.tree_weights = np.append(self.tree_weights, [1.0])
                     self.tree_weights /= np.sum(self.tree_weights)
                 else:
-                    raise ValueError("The new tree must be fitted before being added.")                           
+                    raise ValueError("The new tree must be fitted before being added.")                       
 
             def save_model(self, model_name):
-    # Remove unfitted trees before saving
                 self.trees = [tree for tree in self.trees if hasattr(tree, "tree_")]
+                self.tree_weights = self.tree_weights[[i for i in range(len(self.trees)) if hasattr(self.trees[i], "tree_")]]
                 with open(model_name, 'wb') as file:
                     joblib.dump(self, file)
 
@@ -314,11 +314,14 @@ def prediction_page():
             label = st.selectbox('Outcome for Learning', [0, 1])
             if st.button('Add Data for Learning'): 
                 new_tree = DecisionTreeClassifier(random_state=42)
-                new_tree.fit(input_df, [label])  # 确保新树得到训练
+                new_tree.fit(input_df, [label])  
                 current_model.add_tree(new_tree)
-                current_model.update_weights(input_df, [label])  # 确保权重更新函数处理的是经过训练的树
-                save_hospital_model(hospital_id, current_model)
-                st.success(f"Updated model for {hospital_id} and saved successfully!")
+                current_model.update_weights(input_df, [label])  
+                try:
+                    save_hospital_model(hospital_id, current_model)
+                    st.success(f"Updated model for {hospital_id} and saved successfully!")
+                except Exception as e:
+                    st.error(f"Error saving model: {e}")
                 
             if st.button('Evaluate Model Performance'):
                 predictions = current_model.predict_proba(input_df)[:, 1]
