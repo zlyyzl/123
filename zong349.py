@@ -334,6 +334,8 @@ def prediction_page():
                             st.success("New tree added and weights updated dynamically! Model saved successfully.")
                         except Exception as e:
                             st.error(f"Error during model update: {e}")
+                except Exception as e:
+                    st.error(f"Error during prediction: {e}")
 
 
         elif prediction_type == "Preoperative_batch":
