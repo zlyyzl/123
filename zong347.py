@@ -310,34 +310,34 @@ def prediction_page():
             shap_df = None 
 
 
-           if st.button('Predict'):
-                try:
-                    output = current_model.predict_proba(input_df)[:, 1]
-                    explainer = shap.Explainer(current_model.trees[0])  # 使用第一个树来创建SHAP解释器
-                    shap_values = explainer.shap_values(input_df)
-                    st.write('Based on feature values, predicted probability of good functional outcome is ' + str(output))
-                    st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], input_df))
+            if st.button('Predict'):
+                 try:
+                     output = current_model.predict_proba(input_df)[:, 1]
+                     explainer = shap.Explainer(current_model.trees[0])  # 使用第一个树来创建SHAP解释器
+                     shap_values = explainer.shap_values(input_df)
+                     st.write('Based on feature values, predicted probability of good functional outcome is ' + str(output))
+                     st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], input_df))
                     
-                    shap_df = pd.DataFrame({
-                        'Feature': input_df.columns,
-                        'SHAP Value': shap_values[1].flatten()
-                    })
+                     shap_df = pd.DataFrame({
+                         'Feature': input_df.columns,
+                         'SHAP Value': shap_values[1].flatten()
+                     })
         
-                    st.write("SHAP values for each feature:")
-                    st.dataframe(shap_df)
+                     st.write("SHAP values for each feature:")
+                     st.dataframe(shap_df)
         
-                    label = st.selectbox('Outcome for Learning', [0, 1])  # 标签选择
+                     label = st.selectbox('Outcome for Learning', [0, 1])  # 标签选择
         
-                    if st.button('Add Data for Learning'):
-                        new_tree = DecisionTreeClassifier(random_state=42)
-                        new_tree.fit(input_df, [label])  # 训练新树
-                        current_model.add_tree(new_tree)  # 将新树添加到动态加权森林
-                        current_model.update_weights(input_df, [label])  # 更新权重
+                     if st.button('Add Data for Learning'):
+                         new_tree = DecisionTreeClassifier(random_state=42)
+                         new_tree.fit(input_df, [label])  # 训练新树
+                         current_model.add_tree(new_tree)  # 将新树添加到动态加权森林
+                         current_model.update_weights(input_df, [label])  # 更新权重
                         # 保存模型到文件
-                        current_model.save_model(f'{hospital_id}_weighted_forest.pkl')  
-                        st.success("New tree added and weights updated dynamically! Model saved successfully.")
-                except Exception as e:
-                    st.error(f"Error during prediction: {e}")
+                         current_model.save_model(f'{hospital_id}_weighted_forest.pkl')  
+                         st.success("New tree added and weights updated dynamically! Model saved successfully.")
+                 except Exception as e:
+                     st.error(f"Error during prediction: {e}")
             
                 
             st.subheader("Sensitivity Analysis")
