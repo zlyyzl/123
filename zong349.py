@@ -238,13 +238,18 @@ def prediction_page():
                 self.tree_weights /= np.sum(self.tree_weights)
     
             def save_model(self, model_name):
+                st.write(f"Saving model to {model_name}")  # 打印保存路径
                 joblib.dump(self, model_name)
-    
+            
             @staticmethod
             def load_model(model_name):
+                st.write(f"Loading model from {model_name}")  # 打印加载路径
                 if os.path.exists(model_name):
                     return joblib.load(model_name)
-                return None
+                else:
+                    st.error(f"Model file {model_name} not found.")
+                    return None
+
     
         def load_hospital_model(hospital_id):
             model_file = f'{hospital_id}_weighted_forest.pkl'
