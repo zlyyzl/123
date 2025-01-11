@@ -291,52 +291,6 @@ def prediction_page():
                         st.success("New tree added and weights updated dynamically! Model saved successfully.")
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
-
-                
-            st.subheader("Sensitivity Analysis")
-            selected_feature = st.selectbox("Select feature to analyze:", input_df.columns)
-            perturbation = st.number_input("Perturbation range:", min_value=0.0, max_value=20.0, value=2.0)
-
-            if st.button("Analyze Sensitivity"):
-                feature_value = features[selected_feature]
-                values = np.linspace(feature_value - perturbation, feature_value + perturbation, num=100)
-                predictions = []
-        
-                for value in values:
-                    temp_df = input_df.copy()
-                    temp_df[selected_feature] = value
-                    prediction = model.predict_proba(temp_df)[:, 1]
-                    predictions.append(prediction[0])  
-
-                sensitivity_df = pd.DataFrame({selected_feature: values, 'Predicted Probability': predictions})
-                st.line_chart(sensitivity_df.set_index(selected_feature))
-
-            if st.button("Highlight Important Features"):
-                if shap_df is not None:  
-                    shap_df_sorted = shap_df.sort_values(by='SHAP Value', ascending=False).head(5)
-                    feature_importance_fig = px.bar(shap_df_sorted, x='SHAP Value', y='Feature', 
-                                         orientation='h', 
-                                         title='Top 5 Important Features based on SHAP Values')
-                    st.plotly_chart(feature_importance_fig)
-                else:
-                    st.warning("Please run the prediction first to get SHAP values.")
-
-            if st.button("Show Global Feature Importance"):
-                if shap_df is not None: 
-                    importances = model.feature_importances_
-                    indices = np.argsort(importances)[::-1]
-        
-                    feature_importance_df = pd.DataFrame({
-                       'Feature': input_df.columns[indices],
-                       'Importance': importances[indices]
-                       })
-        
-                    feature_importance_df['Cumulative Importance'] = feature_importance_df['Importance'].cumsum()        
-                    importance_fig = px.line(feature_importance_df, x='Feature', y='Cumulative Importance',
-                                  title='Cumulative Feature Importance')
-                    st.plotly_chart(importance_fig)
-                else:
-                    st.warning("Please run the prediction first to get feature importance.")
                               
 
         elif prediction_type == "Preoperative_batch":
