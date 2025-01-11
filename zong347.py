@@ -187,22 +187,29 @@ def prediction_page():
 
     elif page == "Prediction":
         st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
-    
+            
+        def load_hospital_model(hospital_id):
+            model_file = f'{hospital_id}_weighted_forest.pkl'
+            if os.path.exists(model_file):
+                return DynamicWeightedForest.load_model(model_file)
+            else:
+                # 如果模型不存在，初始化一个新的
+                initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
+                return DynamicWeightedForest(initial_model.estimators_)
+        
+        # 动态加权森林
         class DynamicWeightedForest:
             def __init__(self, base_trees):
                 self.trees = base_trees
                 self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
-
+        
             def predict_proba(self, X):
                 weighted_votes = np.zeros((X.shape[0], 2))
-                valid_trees = [tree for tree in self.trees if hasattr(tree, "tree_")]  # Ensure trees are trained
-                if len(valid_trees) == 0:
-                    raise ValueError("No fitted trees available for making predictions.")
-                for i, tree in enumerate(valid_trees):
+                for i, tree in enumerate(self.trees):
                     proba = tree.predict_proba(X)
                     weighted_votes += self.tree_weights[i] * proba
-                return weighted_votes / np.sum(self.tree_weights) if np.sum(self.tree_weights) > 0 else None
-
+                return weighted_votes / np.sum(self.tree_weights)
+        
             def update_weights(self, X, y):
                 for i, tree in enumerate(self.trees):
                     predictions = tree.predict(X)
@@ -211,50 +218,39 @@ def prediction_page():
                 self.tree_weights /= np.sum(self.tree_weights)
         
             def add_tree(self, new_tree):
-                if hasattr(new_tree, "tree_"):
-                    self.trees.append(new_tree)
-                    self.tree_weights = np.append(self.tree_weights, [1.0])
-                    self.tree_weights /= np.sum(self.tree_weights)
-                else:
-                    raise ValueError("The new tree must be fitted before being added.")
+                self.trees.append(new_tree)
+                self.tree_weights = np.append(self.tree_weights, [1.0])
+                self.tree_weights /= np.sum(self.tree_weights)
         
             def save_model(self, model_name):
-                with open(model_name, 'wb') as file:
-                    joblib.dump(self, file)
+                joblib.dump(self, model_name)
         
             @staticmethod
             def load_model(model_name):
                 if os.path.exists(model_name):
-                    with open(model_name, 'rb') as file:
-                        return joblib.load(file)
+                    return joblib.load(model_name)
                 return None
-
-
-        hospital_models = {}
         
-        def load_hospital_model(hospital_id):
-            model_file = f'{hospital_id}_weighted_forest.pkl'
-            if hospital_id not in hospital_models:
-                hospital_model = DynamicWeightedForest.load_model(model_file)
-                if hospital_model is None or len(hospital_model.trees) == 0:
-                    base_tree = DecisionTreeClassifier(random_state=42)
-                    hospital_model = DynamicWeightedForest([base_tree])  
-                else:
-                    hospital_model.trees = [tree for tree in hospital_model.trees if hasattr(tree, "tree_")]
-                
-                hospital_models[hospital_id] = hospital_model
-            
-            return hospital_models[hospital_id]
+        # Streamlit 页面
+        st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
         
+        # 医院选择
+        hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
         
-        def save_hospital_model(hospital_id, model):
-            model_file = f'{hospital_id}_weighted_forest.pkl'
-            model.save_model(model_file)
-        
+        # 加载模型
+        current_model = load_hospital_model(hospital_id)
         
         def st_shap(plot, height=None):
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
             components.html(shap_html, height=height)
+        
+        # 预测类型
+        prediction_type = st.sidebar.selectbox(
+            "How would you like to predict?",
+            ("Preoperative_number", "Preoperative_batch", "Intraoperative_number", "Intraoperative_batch", 
+             "Postoperative_number", "Postoperative_batch")
+        )
+
             
         model = joblib.load('tuned_rf_pre_BUN.pkl')
         model2 = load_model('tuned_rf_pre_BUN_model')
@@ -314,38 +310,34 @@ def prediction_page():
             shap_df = None 
 
 
-            if st.button('Predict'):
+           if st.button('Predict'):
                 try:
-                    if len(current_model.trees) == 0 or all(not hasattr(tree, "tree_") for tree in current_model.trees):
-                        st.warning("No fitted trees available for making predictions.")
-                    else:
-                        output = current_model.predict_proba(input_df)[:, 1]
-                        explainer = shap.Explainer(current_model.trees[0])
-                        shap_values = explainer.shap_values(input_df)
-                        st.write(' Based on feature values, predicted probability of good functional outcome is ' + str(output))
-                        st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], input_df))
-                        shap_df = pd.DataFrame({
+                    output = current_model.predict_proba(input_df)[:, 1]
+                    explainer = shap.Explainer(current_model.trees[0])  # 使用第一个树来创建SHAP解释器
+                    shap_values = explainer.shap_values(input_df)
+                    st.write('Based on feature values, predicted probability of good functional outcome is ' + str(output))
+                    st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], input_df))
+                    
+                    shap_df = pd.DataFrame({
                         'Feature': input_df.columns,
-                        'SHAP Value': shap_values[1].flatten() 
-                     })
-                        
-                        st.write("SHAP values for each feature:")
-                        st.dataframe(shap_df)
+                        'SHAP Value': shap_values[1].flatten()
+                    })
+        
+                    st.write("SHAP values for each feature:")
+                    st.dataframe(shap_df)
+        
+                    label = st.selectbox('Outcome for Learning', [0, 1])  # 标签选择
+        
+                    if st.button('Add Data for Learning'):
+                        new_tree = DecisionTreeClassifier(random_state=42)
+                        new_tree.fit(input_df, [label])  # 训练新树
+                        current_model.add_tree(new_tree)  # 将新树添加到动态加权森林
+                        current_model.update_weights(input_df, [label])  # 更新权重
+                        # 保存模型到文件
+                        current_model.save_model(f'{hospital_id}_weighted_forest.pkl')  
+                        st.success("New tree added and weights updated dynamically! Model saved successfully.")
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
-            
-            if st.button('Add Data for Learning'):
-                try:
-                    new_tree = DecisionTreeClassifier(random_state=42)
-                    new_tree.fit(input_df, [label])  
-                    current_model.add_tree(new_tree)
-                    current_model.update_weights(input_df, [label])
-                    save_hospital_model(hospital_id, current_model)
-                    st.success(f"Updated model for {hospital_id} and saved successfully!")
-                except ValueError as e:
-                    st.error(f"Failed to train new tree: {e}")
-                except Exception as e:
-                    st.error(f"An error occurred while updating the model: {e}")
             
                 
             st.subheader("Sensitivity Analysis")
