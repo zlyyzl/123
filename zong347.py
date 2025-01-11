@@ -270,19 +270,22 @@ def prediction_page():
     
             if st.button('Predict'):
                 try:
-                    output = current_model.predict_proba(input_df)[:, 1]
-                    explainer = shap.Explainer(current_model)  
-                    shap_values = explainer.shap_values(input_df)
-    
+                    output = current_model.predict_proba(input_df)[:, 1]  # This will still work
+                    explainer = shap.Explainer(current_model)  # Now you can use the whole model
+                    shap_values = explainer(input_df)
+            
                     st.write('Based on feature values, predicted probability of good functional outcome is: ' + str(output))
-                    st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], input_df))
-    
+                    st_shap(shap.force_plot(explainer.expected_value[1], shap_values.values[:, 1], input_df))
+            
                     shap_df = pd.DataFrame({
                         'Feature': input_df.columns,
-                        'SHAP Value': shap_values[1].flatten()
+                        'SHAP Value': shap_values.values[:, 1]
                     })
                     st.write("SHAP values for each feature:")
                     st.dataframe(shap_df)
+                except Exception as e:
+                    st.error(f"Error during prediction: {e}")
+
     
                     label = st.selectbox('Outcome for Learning', [0, 1])  
                     if st.button('Add Data for Learning'):
