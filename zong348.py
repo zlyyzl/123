@@ -207,10 +207,13 @@ def prediction_page():
 
             def update_weights(self, X, y):
                 for i, tree in enumerate(self.trees):
-                    predictions = tree.predict(X)
-                    accuracy = np.mean(predictions == y)
-                    self.tree_weights[i] = accuracy
-                self.tree_weights /= np.sum(self.tree_weights)  
+                    if hasattr(tree, "tree_"):  
+                        predictions = tree.predict(X)
+                        accuracy = np.mean(predictions == y)
+                        self.tree_weights[i] = accuracy
+                    else:
+                        st.warning(f"Tree {i} not fitted. Skipping updates for this tree.")
+                self.tree_weights /= np.sum(self.tree_weights) 
 
             def add_tree(self, new_tree):
                 self.trees.append(new_tree)
