@@ -268,7 +268,7 @@ def prediction_page():
             if st.button('Predict'):
                 try:
                     output = current_model.predict_proba(input_df)[:, 1]
-                    explainer = shap.Explainer(current_model.trees[0])  
+                    explainer = shap.Explainer(current_model)  
                     shap_values = explainer.shap_values(input_df)
     
                     st.write('Based on feature values, predicted probability of good functional outcome is: ' + str(output))
