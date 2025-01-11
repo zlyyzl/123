@@ -302,20 +302,18 @@ def prediction_page():
     
                     label = st.selectbox('Outcome for Learning', [0, 1])  
                     if st.button('Add Data for Learning'):
-                        st.write("Button clicked!")  # 添加此行
-                        try:
-                            new_tree = DecisionTreeClassifier(random_state=42)
-                            st.write("Initialized new Decision Tree.")  # 添加此行
-                            new_tree.fit(input_df, [label])
-                            st.write("Fitted new tree with input data.")  # 添加此行
-                            current_model.add_tree(new_tree)
-                            st.write("Added new tree to the model.")  # 添加此行
-                            current_model.update_weights(input_df, [label])
-                            st.write("Updated tree weights.")  # 添加此行
-                            current_model.save_model(f'{hospital_id}_weighted_forest.pkl')
-                            st.success("New tree added and weights updated dynamically! Model saved successfully.")
-                         except Exception as e:
-                            st.error(f"Error during model update: {e}")
+                        new_tree = DecisionTreeClassifier(random_state=42)
+                        st.write("Initialized new Decision Tree.")  # 添加此行
+                        new_tree.fit(input_df, [label])
+                        st.write("Fitted new tree with input data.")  # 添加此行
+                        current_model.add_tree(new_tree)
+                        st.write("Added new tree to the model.")  # 添加此行
+                        current_model.update_weights(input_df, [label])
+                        st.write("Updated tree weights.")  # 添加此行
+                        current_model.save_model(f'{hospital_id}_weighted_forest.pkl')
+                        st.success("New tree added and weights updated dynamically! Model saved successfully.")
+                except Exception as e:
+                    st.error(f"Error during prediction: {e}")
 
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
