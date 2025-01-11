@@ -297,30 +297,35 @@ def prediction_page():
     
             if st.button('Predict'): 
                 try:
+                    # 预测逻辑
                     output = current_model.predict_proba(input_df)[:, 1]
                     explainer = shap.Explainer(current_model)  
                     shap_values, expected_value = current_model.get_weighted_shap_values(input_df)
-    
+            
                     st.write('Based on feature values, predicted probability of good functional outcome is: ' + str(output))
                     st_shap(shap.force_plot(expected_value, shap_values[0], input_df))
-    
+            
                     shap_df = pd.DataFrame({
                         'Feature': input_df.columns,
                         'SHAP Value': shap_values[0]
                     })
                     st.write("SHAP values for each feature:")
                     st.dataframe(shap_df)
+            
+                    # 增量学习部分逻辑
                     label = st.selectbox('Outcome for Learning', [0, 1])
-
+            
+                    # 使用 session_state 保存按钮状态
                     if 'add_data_clicked' not in st.session_state:
                         st.session_state['add_data_clicked'] = False
-                    
+            
                     if st.button('Add Data for Learning'):
                         st.session_state['add_data_clicked'] = True
-                    
+            
                     if st.session_state['add_data_clicked']:
-                        st.write("Add Data for Learning button clicked!")  # 确认按钮状态
+                        st.write("Add Data for Learning button clicked!")  # 验证逻辑触发
                         try:
+                            # 增量学习逻辑
                             st.write("Starting to add new tree to the model.")
                             new_tree = DecisionTreeClassifier(random_state=42)
                             st.write("Initialized new Decision Tree.")
@@ -335,7 +340,9 @@ def prediction_page():
                         except Exception as e:
                             st.error(f"Error during model update: {e}")
                 except Exception as e:
+                    # 捕获整个预测部分的异常
                     st.error(f"Error during prediction: {e}")
+
 
 
         elif prediction_type == "Preoperative_batch":
