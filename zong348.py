@@ -306,9 +306,9 @@ def prediction_page():
             label = st.selectbox('Outcome for Learning', [0, 1])
             if st.button('Add Data for Learning'): 
                 new_tree = DecisionTreeClassifier(random_state=42)
-                new_tree.fit(input_df, [label])
+                new_tree.fit(input_df, [label])  # 确保新树得到训练
                 current_model.add_tree(new_tree)
-                current_model.update_weights(input_df, [label])
+                current_model.update_weights(input_df, [label])  # 确保权重更新函数处理的是经过训练的树
                 save_hospital_model(hospital_id, current_model)
                 st.success(f"Updated model for {hospital_id} and saved successfully!")
                 
