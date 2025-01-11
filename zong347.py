@@ -188,113 +188,109 @@ def prediction_page():
     elif page == "Prediction":
         st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
 
-        class DynamicWeightedForest:
-            def __init__(self, base_trees):
-                self.trees = base_trees
-                self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
-        
-            def predict_proba(self, X):
-                weighted_votes = np.zeros((X.shape[0], 2))
-                for i, tree in enumerate(self.trees):
-                    proba = tree.predict_proba(X)
-                    weighted_votes += self.tree_weights[i] * proba
-                return weighted_votes / np.sum(self.tree_weights)
-        
-            def update_weights(self, X, y):
-                for i, tree in enumerate(self.trees):
-                    predictions = tree.predict(X)
-                    accuracy = np.mean(predictions == y)
-                    self.tree_weights[i] = accuracy
-                self.tree_weights /= np.sum(self.tree_weights)
-        
-            def add_tree(self, new_tree):
-                self.trees.append(new_tree)
-                self.tree_weights = np.append(self.tree_weights, [1.0])
-                self.tree_weights /= np.sum(self.tree_weights)
-        
-            @staticmethod
-            def save_model(model, model_name):
-                joblib.dump(model, model_name)
-        
-            @staticmethod
-            def load_model_from_file(model_name):
-                if os.path.exists(model_name):
-                    return joblib.load(model_name)
-                return None
-
-
         model = joblib.load('tuned_rf_pre_BUN.pkl')
         model2 = load_model('tuned_rf_pre_BUN_model')
         model3 = joblib.load('tuned_rf_intra_BUN.pkl')
         model4 = load_model('tuned_rf_intra_BUN_model')
         model5 = joblib.load('tuned_rf_post_BUN.pkl')
         model6 = load_model('tuned_rf_post_BUN_model')
+    
+        class DynamicWeightedForest:
+            def __init__(self, base_trees):
+                self.trees = base_trees
+                self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
+    
+            def predict_proba(self, X):
+                weighted_votes = np.zeros((X.shape[0], 2))
+                for i, tree in enumerate(self.trees):
+                    proba = tree.predict_proba(X)
+                    weighted_votes += self.tree_weights[i] * proba
+                return weighted_votes / np.sum(self.tree_weights)
+    
+            def update_weights(self, X, y):
+                for i, tree in enumerate(self.trees):
+                    predictions = tree.predict(X)
+                    accuracy = np.mean(predictions == y)
+                    self.tree_weights[i] = accuracy
+                self.tree_weights /= np.sum(self.tree_weights)
+    
+            def add_tree(self, new_tree):
+                self.trees.append(new_tree)
+                self.tree_weights = np.append(self.tree_weights, [1.0])
+                self.tree_weights /= np.sum(self.tree_weights)
+    
+            def save_model(self, model_name):
+                joblib.dump(self, model_name)
+    
+            @staticmethod
+            def load_model(model_name):
+                if os.path.exists(model_name):
+                    return joblib.load(model_name)
+                return None
+    
+        def load_hospital_model(hospital_id):
+            model_file = f'{hospital_id}_weighted_forest.pkl'
+            if os.path.exists(model_file):
+                return DynamicWeightedForest.load_model(model_file)
+            else:
+                initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
+                return DynamicWeightedForest(initial_model.estimators_)
 
-        pre_weighted_forest = DynamicWeightedForest(model.estimators_) if model2 is not None else None
-        
-        def st_shap(plot, height=None):
+        hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
+        current_model = load_hospital_model(hospital_id)
+    
+        def st_shap(plot):
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
-            components.html(shap_html, height=height)
-        
+            components.html(shap_html)
+    
         prediction_type = st.sidebar.selectbox(
             "How would you like to predict?",
             ("Preoperative_number", "Preoperative_batch", "Intraoperative_number", "Intraoperative_batch", 
              "Postoperative_number", "Postoperative_batch")
         )
-        
+    
         if prediction_type == "Preoperative_number":
             st.subheader("Preoperative Number Prediction")
-            st.write("Please fill in the blanks with corresponding data and click 'Predict'.")
-        
-            NIHSS = st.number_input('NIHSS', min_value=4, max_value=38, value=10)
-            GCS = st.number_input('GCS', min_value=0, max_value=15, value=10)
-            pre_eGFR = st.number_input('pre_eGFR', min_value=10.00, max_value=250.00, value=111.5)
-            pre_glucose = st.number_input('pre_glucose', min_value=2.50, max_value=25.00, value=7.78)
-            PC_ASPECTS = st.number_input('PC_ASPECTS', min_value=0.0, max_value=10.0, value=8.0)
-            Age = st.number_input('Age', min_value=0, max_value=120, value=60)
-            pre_BUN = st.number_input('pre_BUN', min_value=0.00, max_value=30.00, value=10.20)
-        
+            st.write("Please fill in the blanks with corresponding data.")
+    
             features = {
-                'NIHSS': NIHSS,
-                'GCS': GCS,
-                'pre_eGFR': pre_eGFR,
-                'pre_glucose': pre_glucose,
-                'PC_ASPECTS': PC_ASPECTS,
-                'Age': Age,
-                'pre_BUN': pre_BUN
+                'NIHSS': st.number_input('NIHSS', min_value=4, max_value=38, value=10),
+                'GCS': st.number_input('GCS', min_value=0, max_value=15, value=10),
+                'pre_eGFR': st.number_input('pre_eGFR', min_value=10.00, max_value=250.00, value=111.5),
+                'pre_glucose': st.number_input('pre_glucose', min_value=2.50, max_value=25.00, value=7.78),
+                'PC_ASPECTS': st.number_input('PC_ASPECTS', min_value=0.0, max_value=10.0, value=8.0),
+                'Age': st.number_input('Age', min_value=0, max_value=120, value=60),
+                'pre_BUN': st.number_input('pre_BUN', min_value=0.00, max_value=30.00, value=10.20)
             }
-        
+    
             input_df = pd.DataFrame([features])
-        
+    
             if st.button('Predict'):
-                if pre_weighted_forest is None:
-                    output = model.predict_proba(input_df)[:, 1]
-                    explainer = shap.Explainer(model)
-                    shap_values = explainer(input_df)
-                else:
-                    output = pre_weighted_forest.predict_proba(input_df)[:, 1]
-                    explainer = shap.Explainer(pre_weighted_forest)
-                    shap_values = explainer(input_df)
-        
-                st.write('Based on feature values, predicted probability of good functional outcome is ' + str(output[0]))
-        
-                shap_values_for_plot = shap_values.values[0]
-                st_shap(shap.force_plot(explainer.expected_value, shap_values_for_plot, input_df.iloc[0]))
-        
-                shap_df = pd.DataFrame({
-                    'Feature': input_df.columns,
-                    'SHAP Value': shap_values_for_plot.flatten()
-                })
-                st.write("SHAP values for each feature:")
-                st.dataframe(shap_df)
-        
-                label = st.selectbox('Outcome for Learning', [0, 1])
-                if st.button('Add Data for Learning'):
-                    new_tree = DecisionTreeClassifier(random_state=42)
-                    new_tree.fit(input_df, [label])
-                    pre_weighted_forest.add_tree(new_tree)
-                    pre_weighted_forest.update_weights(input_df, [label])
-                    st.success("New tree added and weights updated dynamically!")
+                try:
+                    output = current_model.predict_proba(input_df)[:, 1]
+                    explainer = shap.Explainer(current_model.trees[0])  
+                    shap_values = explainer.shap_values(input_df)
+    
+                    st.write('Based on feature values, predicted probability of good functional outcome is: ' + str(output))
+                    st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1], input_df))
+    
+                    shap_df = pd.DataFrame({
+                        'Feature': input_df.columns,
+                        'SHAP Value': shap_values[1].flatten()
+                    })
+                    st.write("SHAP values for each feature:")
+                    st.dataframe(shap_df)
+    
+                    label = st.selectbox('Outcome for Learning', [0, 1])  
+                    if st.button('Add Data for Learning'):
+                        new_tree = DecisionTreeClassifier(random_state=42)
+                        new_tree.fit(input_df, [label])  
+                        current_model.add_tree(new_tree) 
+                        current_model.update_weights(input_df, [label])  
+                        current_model.save_model(f'{hospital_id}_weighted_forest.pkl')  
+                        st.success("New tree added and weights updated dynamically! Model saved successfully.")
+                except Exception as e:
+                    st.error(f"Error during prediction: {e}")
 
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
