@@ -22,6 +22,11 @@ import streamlit.components.v1 as components
 import openpyxl
 import os
 
+if 'new_data' not in st.session_state:
+    st.session_state['new_data'] = pd.DataFrame(columns=[
+        'NIHSS', 'GCS', 'pre_eGFR', 'pre_glucose', 'PC_ASPECTS', 'Age', 'pre_BUN', 'label'
+    ])
+
 class DynamicWeightedForest:
     def __call__(self, X):
         return self.predict_proba(X)
