@@ -60,19 +60,18 @@ class DynamicWeightedForest:
         self.tree_weights /= np.sum(self.tree_weights)
 
     def save_model(self, model_name):
-        st.write(f"Saving model to {model_name}")  # 打印保存路径
+        st.write(f"Saving model to {model_name}")  
         joblib.dump(self, model_name)
             
     @staticmethod
     def load_model(model_name):
-        st.write(f"Loading model from {model_name}")  # 打印加载路径
+        st.write(f"Loading model from {model_name}")  
         if os.path.exists(model_name):
             return joblib.load(model_name)
         else:
             st.error(f"Model file {model_name} not found.")
             return None
 
-# 加载医院模型的函数
 def load_hospital_model(hospital_id):
     model_file = f'{hospital_id}_weighted_forest.pkl'
     st.write(f"Attempting to load hospital model: {model_file}")
