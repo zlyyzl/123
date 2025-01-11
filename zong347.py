@@ -318,7 +318,7 @@ def prediction_page():
                         except Exception as e:
                             st.error(f"Error during model update: {e}")
 
-         elif prediction_type == "Preoperative_batch":
+        elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
             def plot_roc_curve(y_true, y_scores): 
                 fpr, tpr, thresholds = roc_curve(y_true, y_scores) 
