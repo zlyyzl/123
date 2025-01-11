@@ -194,18 +194,21 @@ def prediction_page():
         model4 = load_model('tuned_rf_intra_BUN_model')
         model5 = joblib.load('tuned_rf_post_BUN.pkl')
         model6 = load_model('tuned_rf_post_BUN_model')
-    
+
         class DynamicWeightedForest:
             def __init__(self, base_trees):
                 self.trees = base_trees
                 self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
-    
+        
             def predict_proba(self, X):
                 weighted_votes = np.zeros((X.shape[0], 2))
                 for i, tree in enumerate(self.trees):
                     proba = tree.predict_proba(X)
                     weighted_votes += self.tree_weights[i] * proba
                 return weighted_votes / np.sum(self.tree_weights)
+        
+            def predict(self, X):  # Add this method for SHAP compatibility
+                return np.argmax(self.predict_proba(X), axis=1)
     
             def update_weights(self, X, y):
                 for i, tree in enumerate(self.trees):
