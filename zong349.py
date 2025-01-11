@@ -183,85 +183,79 @@ def prediction_page():
         image = Image.open('it.tif')
         st.image(image, use_column_width=True)
 
-    class DynamicWeightedForest:
-        
-            def __call__(self, X):
-                return self.predict_proba(X)
+class DynamicWeightedForest:
+    def __call__(self, X):
+        return self.predict_proba(X)
                 
-            def __init__(self, base_trees):
-                self.trees = base_trees
-                self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
-        
-            def predict_proba(self, X):
-                weighted_votes = np.zeros((X.shape[0], 2))
-                for i, tree in enumerate(self.trees):
-                    proba = tree.predict_proba(X)
-                    weighted_votes += self.tree_weights[i] * proba
-                return weighted_votes / np.sum(self.tree_weights)
-        
-            def get_weighted_shap_values(self, X):
-                shap_values_sum = np.zeros((X.shape[0], X.shape[1]))
-                expected_value_sum = 0
+    def __init__(self, base_trees):
+        self.trees = base_trees
+        self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
+    
+    def predict_proba(self, X):
+        weighted_votes = np.zeros((X.shape[0], 2))
+        for i, tree in enumerate(self.trees):
+            proba = tree.predict_proba(X)
+            weighted_votes += self.tree_weights[i] * proba
+        return weighted_votes / np.sum(self.tree_weights)
+
+    def get_weighted_shap_values(self, X):
+        shap_values_sum = np.zeros((X.shape[0], X.shape[1]))
+        expected_value_sum = 0
+        for tree, weight in zip(self.trees, self.tree_weights):
+            explainer = shap.TreeExplainer(tree)
+            shap_values_tree = explainer.shap_values(X)[1]  # 正类的 SHAP 值
+            expected_value_tree = explainer.expected_value[1]
+            shap_values_sum += weight * shap_values_tree
+            expected_value_sum += weight * expected_value_tree
+        return shap_values_sum, expected_value_sum
+
+    def update_weights(self, X, y):
+        for i, tree in enumerate(self.trees):
+            predictions = tree.predict(X)
+            accuracy = np.mean(predictions == y)
+            self.tree_weights[i] = accuracy
+        self.tree_weights /= np.sum(self.tree_weights)
+
+    def add_tree(self, new_tree):
+        self.trees.append(new_tree)
+        self.tree_weights = np.append(self.tree_weights, [1.0])
+        self.tree_weights /= np.sum(self.tree_weights)
+
+    def save_model(self, model_name):
+        st.write(f"Saving model to {model_name}")  # 打印保存路径
+        joblib.dump(self, model_name)
             
-                for tree, weight in zip(self.trees, self.tree_weights):
-                    explainer = shap.TreeExplainer(tree)
-                    shap_values_tree = explainer.shap_values(X)[1]  # 正类的 SHAP 值
-                    expected_value_tree = explainer.expected_value[1]
-            
-                    shap_values_sum += weight * shap_values_tree
-                    expected_value_sum += weight * expected_value_tree
-            
-                return shap_values_sum, expected_value_sum
-        
-        
-            def update_weights(self, X, y):
-                for i, tree in enumerate(self.trees):
-                    predictions = tree.predict(X)
-                    accuracy = np.mean(predictions == y)
-                    self.tree_weights[i] = accuracy
-                self.tree_weights /= np.sum(self.tree_weights)
-        
-            def add_tree(self, new_tree):
-                self.trees.append(new_tree)
-                self.tree_weights = np.append(self.tree_weights, [1.0])
-                self.tree_weights /= np.sum(self.tree_weights)
-        
-            def save_model(self, model_name):
-                st.write(f"Saving model to {model_name}")  # 打印保存路径
-                joblib.dump(self, model_name)
-            
-            @staticmethod
-            def load_model(model_name):
-                st.write(f"Loading model from {model_name}")  # 打印加载路径
-                if os.path.exists(model_name):
-                    return joblib.load(model_name)
-                else:
-                    st.error(f"Model file {model_name} not found.")
-                    return None
-        
-        
-        # load_hospital_model 函数
-        def load_hospital_model(hospital_id):
-            model_file = f'{hospital_id}_weighted_forest.pkl'
-            st.write(f"Attempting to load hospital model: {model_file}")
+    @staticmethod
+    def load_model(model_name):
+        st.write(f"Loading model from {model_name}")  # 打印加载路径
+        if os.path.exists(model_name):
+            return joblib.load(model_name)
+        else:
+            st.error(f"Model file {model_name} not found.")
+            return None
+
+# 加载医院模型的函数
+def load_hospital_model(hospital_id):
+    model_file = f'{hospital_id}_weighted_forest.pkl'
+    st.write(f"Attempting to load hospital model: {model_file}")
+    try:
+        if os.path.exists(model_file):
             try:
-                if os.path.exists(model_file):
-                    try:
-                        model = DynamicWeightedForest.load_model(model_file)
-                        st.write(f"Model loaded successfully: {model_file}")
-                        return model
-                    except EOFError:
-                        st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
-                        os.remove(model_file)
-                else:
-                    st.warning(f"Model file not found: {model_file}. Creating a new model.")
-                    
-                initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
-                st.write("Initialized a new model from base trees.")
-                return DynamicWeightedForest(initial_model.estimators_)
-            except Exception as e:
-                st.error(f"Failed to load or create model for {hospital_id}: {e}")
-                return None
+                model = DynamicWeightedForest.load_model(model_file)
+                st.write(f"Model loaded successfully: {model_file}")
+                return model
+            except EOFError:
+                st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
+                os.remove(model_file)
+        else:
+            st.warning(f"Model file not found: {model_file}. Creating a new model.")
+            
+        initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
+        st.write("Initialized a new model from base trees.")
+        return DynamicWeightedForest(initial_model.estimators_)
+    except Exception as e:
+        st.error(f"Failed to load or create model for {hospital_id}: {e}")
+        return None
 
     elif page == "Prediction":
         st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
