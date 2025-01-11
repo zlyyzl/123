@@ -253,22 +253,29 @@ def prediction_page():
     
             def load_hospital_model(hospital_id):
                 model_file = f'{hospital_id}_weighted_forest.pkl'
-                st.write(f"Attempting to load model: {model_file}")
-                if os.path.exists(model_file):
-                    try:
-                        model = DynamicWeightedForest.load_model(model_file)
-                        st.write(f"Model loaded successfully: {model_file}")
-                        return model
-                    except EOFError:
-                        st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
-                        os.remove(model_file)
-                else:
-                    st.warning(f"Model file not found: {model_file}. Creating a new one.")
-                
-                # 如果文件不存在或损坏，重新初始化模型
-                initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
-                return DynamicWeightedForest(initial_model.estimators_)
+                st.write(f"Attempting to load hospital model: {model_file}")
+                try:
+                    if os.path.exists(model_file):
+                        try:
+                            model = DynamicWeightedForest.load_model(model_file)
+                            st.write(f"Model loaded successfully: {model_file}")
+                            return model
+                        except EOFError:
+                            st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
+                            os.remove(model_file)
+                    else:
+                        st.warning(f"Model file not found: {model_file}. Creating a new model.")
+                    
+                    initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
+                    st.write("Initialized a new model from base trees.")
+                    return DynamicWeightedForest(initial_model.estimators_)
+                except Exception as e:
+                    st.error(f"Failed to load or create model for {hospital_id}: {e}")
+                    return None
 
+        hospital_id = st.sidebar.selectbox("Select Hospital ID:", ["Hospital_A", "Hospital_B", "Hospital_C"])
+        current_model = load_hospital_model(hospital_id)
+    
     
         def st_shap(plot):
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
