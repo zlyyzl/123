@@ -196,6 +196,10 @@ def prediction_page():
         model6 = load_model('tuned_rf_post_BUN_model')
     
         class DynamicWeightedForest:
+
+            def __call__(self, X):
+                return self.predict_proba(X)
+                
             def __init__(self, base_trees):
                 self.trees = base_trees
                 self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
@@ -268,7 +272,7 @@ def prediction_page():
             if st.button('Predict'):
                 try:
                     output = current_model.predict_proba(input_df)[:, 1]
-                    explainer = shap.Explainer(current_model.trees)  
+                    explainer = shap.Explainer(current_model)  
                     shap_values = explainer.shap_values(input_df)
     
                     st.write('Based on feature values, predicted probability of good functional outcome is: ' + str(output))
