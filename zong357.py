@@ -29,12 +29,15 @@ class DynamicWeightedForest:
     def __init__(self, base_trees):
         self.trees = base_trees
         self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
-    
+
     def predict_proba(self, X):
         weighted_votes = np.zeros((X.shape[0], 2))
         for i, tree in enumerate(self.trees):
             proba = tree.predict_proba(X)
             weighted_votes += self.tree_weights[i] * proba
+
+        if weighted_votes.shape[1] == 1:
+            weighted_votes = np.hstack([1 - weighted_votes, weighted_votes])  # Add missing class probability
         return weighted_votes / np.sum(self.tree_weights)
 
     def get_weighted_shap_values(self, X):
