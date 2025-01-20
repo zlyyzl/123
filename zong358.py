@@ -313,7 +313,7 @@ def prediction_page():
 
             if st.button('Predict'):
                 try:
-                    output = current_model2.predict_proba(input_df)  # 用术中模型进行预测
+                    output = current_model.predict_proba(input_df)  
 
                     # Check if output has only one class (shape: (n_samples, 1))
                     if output.shape[1] == 1:
@@ -322,8 +322,8 @@ def prediction_page():
 
                     # Now we can safely access the second class (index 1)
                     probability = output[:, 1]
-                    explainer = shap.Explainer(current_model2)
-                    shap_values, expected_value = current_model2.get_weighted_shap_values(input_df)
+                    explainer = shap.Explainer(current_model)
+                    shap_values, expected_value = current_model.get_weighted_shap_values(input_df)
 
                     st.write(f'Based on feature values, predicted probability of good functional outcome is: {probability[0]:.4f}')
                     st_shap(shap.force_plot(expected_value, shap_values[0], input_df))
