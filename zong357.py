@@ -413,40 +413,40 @@ def prediction_page():
                     st.dataframe(shap_df)
 
 
-            label = int(st.selectbox('Outcome for Learning', [0, 1]))
-
-            if st.button('Add Data for Learning'):
-                try:
-                    new_data = input_df.copy()
-                    new_data['label'] = label
-                    st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
-
-                    accumulated_data = st.session_state['new_data']
-                    X = accumulated_data.drop(columns=['label'])
-                    y = accumulated_data['label'].astype(int)
-
-                    st.write("Accumulated training data preview:")
-                    st.dataframe(accumulated_data)
-                    st.write(f"Features shape: {X.shape}, Labels shape: {y.shape}")
-                    st.write(f"Unique labels in training data: {y.unique()}")
-
-                    if isinstance(current_model, RandomForestClassifier):
-                        # For RandomForestClassifier, retrain the model with new data
-                        current_model.fit(X, y)
-                        joblib.dump(current_model, 'tuned_rf_pre_BUN.pkl')  # Save the updated model
-                        st.success("RandomForestClassifier model updated successfully with new data!")
-
-                    elif isinstance(current_model, DynamicWeightedForest):
-                        # For DynamicWeightedForest, add the new tree and update the weights
-                        new_tree = DecisionTreeClassifier(random_state=42)
-                        new_tree.fit(X, y)
-                        current_model.add_tree(new_tree)
-                        current_model.update_weights(X, y)
-                        current_model.save_model('global_weighted_forest.pkl')  # Save the updated DWF model
-                        st.success("DynamicWeightedForest model updated successfully with new tree and weights!")
-
-                except Exception as e:
-                    st.error(f"Error during model update: {e}")
+                label = int(st.selectbox('Outcome for Learning', [0, 1]))
+    
+                if st.button('Add Data for Learning'):
+                    try:
+                        new_data = input_df.copy()
+                        new_data['label'] = label
+                        st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
+    
+                        accumulated_data = st.session_state['new_data']
+                        X = accumulated_data.drop(columns=['label'])
+                        y = accumulated_data['label'].astype(int)
+    
+                        st.write("Accumulated training data preview:")
+                        st.dataframe(accumulated_data)
+                        st.write(f"Features shape: {X.shape}, Labels shape: {y.shape}")
+                        st.write(f"Unique labels in training data: {y.unique()}")
+    
+                        if isinstance(current_model, RandomForestClassifier):
+                            # For RandomForestClassifier, retrain the model with new data
+                            current_model.fit(X, y)
+                            joblib.dump(current_model, 'tuned_rf_pre_BUN.pkl')  # Save the updated model
+                            st.success("RandomForestClassifier model updated successfully with new data!")
+    
+                        elif isinstance(current_model, DynamicWeightedForest):
+                            # For DynamicWeightedForest, add the new tree and update the weights
+                            new_tree = DecisionTreeClassifier(random_state=42)
+                            new_tree.fit(X, y)
+                            current_model.add_tree(new_tree)
+                            current_model.update_weights(X, y)
+                            current_model.save_model('global_weighted_forest.pkl')  # Save the updated DWF model
+                            st.success("DynamicWeightedForest model updated successfully with new tree and weights!")
+    
+                    except Exception as e:
+                        st.error(f"Error during model update: {e}")
             
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
