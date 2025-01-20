@@ -31,14 +31,20 @@ class DynamicWeightedForest:
         self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
 
     def predict_proba(self, X):
-        weighted_votes = np.zeros((X.shape[0], 2))
+        weighted_votes = np.zeros((X.shape[0], 2))  # Ensure the output is always (n_samples, 2)
+        
         for i, tree in enumerate(self.trees):
             proba = tree.predict_proba(X)
+            
+            print(f"Tree {i} proba shape: {proba.shape}")
+        
+            if proba.shape[1] == 1:
+                proba = np.hstack([1 - proba, proba])  # Add missing class probability
+            
             weighted_votes += self.tree_weights[i] * proba
 
-        if weighted_votes.shape[1] == 1:
-            weighted_votes = np.hstack([1 - weighted_votes, weighted_votes])  # Add missing class probability
         return weighted_votes / np.sum(self.tree_weights)
+
 
     def get_weighted_shap_values(self, X):
         shap_values_sum = np.zeros((X.shape[0], X.shape[1]))
@@ -62,6 +68,9 @@ class DynamicWeightedForest:
         self.trees.append(new_tree)
         self.tree_weights = np.append(self.tree_weights, [1.0])
         self.tree_weights /= np.sum(self.tree_weights)
+    
+        # Debugging: Check the shape after adding a new tree
+        print(f"After adding new tree, number of trees: {len(self.trees)}")
 
     def save_model(self, model_name):
         st.write(f"Saving model to {model_name}")  
