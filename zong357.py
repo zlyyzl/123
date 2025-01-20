@@ -361,48 +361,44 @@ def prediction_page():
                 
             if st.button('Predict'):
                 try:
-                    # Convert DataFrame to NumPy array and reshape it to 2D if necessary
-                    input_array = input_df.values.reshape(1, -1)  # Make sure the input is 2-dimensional
-
                     # Ensure the model is the correct type
                     if isinstance(current_model, RandomForestClassifier):
                         output = current_model.predict_proba(input_array)
-
-                        # Check if output has only one class (shape: (n_samples, 1))
-                        if output.shape[1] == 1:
+        
+                        if output.shape[1] == 1:  # Only one class predicted
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
-                            output = np.hstack([1 - output, output])  # Add missing class probability
-
+                            output = np.hstack([1 - output, output])
+        
                         probability = output[:, 1]
-
+        
                         # SHAP for RandomForestClassifier
                         explainer = shap.TreeExplainer(current_model)
                         shap_values = explainer.shap_values(input_array)
-                        expected_value = explainer.expected_value[1]
-
+                        expected_value = explainer.expected_value[1] if isinstance(shap_values, list) else explainer.expected_value
+        
+                        # If shap_values is multi-output, select the index for the positive class (index 1)
+                        if isinstance(shap_values, list):
+                            shap_values = shap_values[1]  # For the positive class (index 1)
+        
                     elif isinstance(current_model, DynamicWeightedForest):
                         output = current_model.predict_proba(input_array)
-
-                        # Check if output has only one class (shape: (n_samples, 1))
+        
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
-                            output = np.hstack([1 - output, output])  # Add missing class probability
-
+                            output = np.hstack([1 - output, output])
+        
                         probability = output[:, 1]
-
+        
                         # SHAP for DynamicWeightedForest
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
-
-                    st.write(f'Based on feature values, predicted probability of good functional outcome is: {probability[0]:.4f}')
-
-                    # If shap_values is multi-output, select the index for the positive class (index 1)
-                    if isinstance(shap_values, list):
-                        shap_values = shap_values[1]  # For the positive class (index 1)
-
-                    # Now you can safely pass shap_values to the force_plot
+        
+                        # Ensure that we are using the correct SHAP values
+                        if isinstance(shap_values, list):
+                            shap_values = shap_values[1]  # For the positive class (index 1)
+        
+                    st.write(f'Predicted probability of good functional outcome: {probability[0]:.4f}')
                     st_shap(shap.force_plot(expected_value, shap_values, input_array))
-
-                    # Ensure shap_values is 1-dimensional for DataFrame creation
+        
                     shap_values_flat = shap_values.flatten()  # Flatten the array to ensure it's 1-dimensional
                     shap_df = pd.DataFrame({
                         'Feature': input_df.columns,
@@ -410,7 +406,7 @@ def prediction_page():
                     })
                     st.write("SHAP values for each feature:")
                     st.dataframe(shap_df)
-
+        
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
 
