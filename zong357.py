@@ -329,19 +329,19 @@ def prediction_page():
              "Postoperative_number", "Postoperative_batch")
         )
     
+                
         if prediction_type == "Preoperative_number":
             st.subheader("Preoperative Number Prediction")
             st.write("Please fill in the blanks with corresponding data.")
-    
-            NIHSS = st.number_input('NIHSS', min_value = 4,max_value = 38,value = 10) 
-            GCS= st.number_input('GCS', min_value = 0,max_value = 15 ,value = 10) 
-            pre_eGFR = st.number_input('pre_eGFR', min_value = 10.00,max_value = 250.00,value = 111.5)
+            
+            NIHSS = st.number_input('NIHSS', min_value = 4, max_value = 38, value = 10) 
+            GCS = st.number_input('GCS', min_value = 0, max_value = 15 , value = 10) 
+            pre_eGFR = st.number_input('pre_eGFR', min_value = 10.00, max_value = 250.00, value = 111.5)
             pre_glucose = st.number_input('pre_glucose', min_value = 2.50, max_value = 25.00, value = 7.78)
-            PC_ASPECTS = st.number_input('PC_ASPECTS', min_value = 0.0,max_value = 10.0,value = 8.0)
-            Age = st.number_input('Age', min_value = 0,max_value = 120,value = 60)
-            pre_BUN = st.number_input('pre_BUN', min_value = 0.00,max_value = 30.00,value = 10.20)
-            output=""
-
+            PC_ASPECTS = st.number_input('PC_ASPECTS', min_value = 0.0, max_value = 10.0, value = 8.0)
+            Age = st.number_input('Age', min_value = 0, max_value = 120, value = 60)
+            pre_BUN = st.number_input('pre_BUN', min_value = 0.00, max_value = 30.00, value = 10.20)
+        
             features = { 
                 'NIHSS': NIHSS, 
                 'GCS': GCS, 
@@ -350,107 +350,90 @@ def prediction_page():
                 'PC_ASPECTS': PC_ASPECTS, 
                 'Age': Age, 
                 'pre_BUN': pre_BUN
-                  }
-
-            print(features) 
-
-            input_df = pd.DataFrame([features]) 
-            print(input_df) 
+            }
+        
+            input_df = pd.DataFrame([features])
+        
             if 'new_data' not in st.session_state:
                 st.session_state['new_data'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
-                
+        
+            # Prediction logic
             if st.button('Predict'):
                 try:
-                    # 在预测之前先将 input_df 转换为二维数组
                     input_array = input_df.values.reshape(1, -1)
-                    
-                    # 确保模型是正确类型
+        
                     if isinstance(current_model, RandomForestClassifier):
                         output = current_model.predict_proba(input_array)
-                    
-                        # 检查输出是否只有一个类别（例如：预测输出形状为 (n_samples, 1)）
+        
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
-                            output = np.hstack([1 - output, output])  # 补充缺失的类别概率
-                    
+                            output = np.hstack([1 - output, output])
+        
                         probability = output[:, 1]
-                    
-                        # SHAP 对 RandomForestClassifier 进行解释
+        
                         explainer = shap.TreeExplainer(current_model)
                         shap_values = explainer.shap_values(input_array)
                         expected_value = explainer.expected_value[1]
-                    
+        
                     elif isinstance(current_model, DynamicWeightedForest):
                         output = current_model.predict_proba(input_array)
-            
-                        # 检查输出是否只有一个类别（例如：预测输出形状为 (n_samples, 1)）
+        
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
-                            output = np.hstack([1 - output, output])  # 补充缺失的类别概率
-                    
+                            output = np.hstack([1 - output, output])
+        
                         probability = output[:, 1]
-                    
-                        # SHAP 对 DynamicWeightedForest 进行解释
+        
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
-                    
-                    # 显示预测结果
-                    st.write(f'Based on feature values, predicted probability of good functional outcome is: {probability[0]:.4f}')
-                    
-                    # 如果 shap_values 是多输出的，选择正类（索引 1）的 SHAP 值
+        
+                    st.write(f'Predicted probability of good functional outcome: {probability[0]:.4f}')
                     if isinstance(shap_values, list):
-                        shap_values = shap_values[1]  # 选择正类的 SHAP 值（索引 1）
-                    
-                    # 使用 force_plot 可视化 SHAP 值
+                        shap_values = shap_values[1]
+        
                     st_shap(shap.force_plot(expected_value, shap_values, input_array))
-                    
-                    # 确保 shap_values 为 1 维数组，以便创建 DataFrame
-                    shap_values_flat = shap_values.flatten()  # 将 SHAP 值展平为 1 维数组
-                    shap_df = pd.DataFrame({
-                        'Feature': input_df.columns,  # 输入特征列名
-                        'SHAP Value': shap_values_flat  # 对应的 SHAP 值
-                    })
+        
+                    shap_values_flat = shap_values.flatten()
+                    shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
                     st.write("SHAP values for each feature:")
-                    st.dataframe(shap_df)  # 显示 SHAP 值的 DataFrame
-            
+                    st.dataframe(shap_df)
+        
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
-            
-                # 预测完之后，添加学习数据
-                label = int(st.selectbox('Outcome for Learning', [0, 1]))  # 确保它在 if 语句块外部
-            
-                if st.button('Add Data for Learning'):
-                    try:
-                        new_data = input_df.copy()
-                        new_data['label'] = label
-                        st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
-            
-                        accumulated_data = st.session_state['new_data']
-                        X = accumulated_data.drop(columns=['label'])
-                        y = accumulated_data['label'].astype(int)
-            
-                        st.write("Accumulated training data preview:")
-                        st.dataframe(accumulated_data)
-                        st.write(f"Features shape: {X.shape}, Labels shape: {y.shape}")
-                        st.write(f"Unique labels in training data: {y.unique()}")
-            
-                        if isinstance(current_model, RandomForestClassifier):
-                            # 对于 RandomForestClassifier，使用新数据重新训练模型
-                            current_model.fit(X, y)
-                            joblib.dump(current_model, 'tuned_rf_pre_BUN.pkl')  # 保存更新后的模型
-                            st.success("RandomForestClassifier model updated successfully with new data!")
-            
-                        elif isinstance(current_model, DynamicWeightedForest):
-                            # 对于 DynamicWeightedForest，添加新树并更新权重
-                            new_tree = DecisionTreeClassifier(random_state=42)
-                            new_tree.fit(X, y)
-                            current_model.add_tree(new_tree)
-                            current_model.update_weights(X, y)
-                            current_model.save_model('global_weighted_forest.pkl')  # 保存更新后的 DWF 模型
-                            st.success("DynamicWeightedForest model updated successfully with new tree and weights!")
-            
-                    except Exception as e:
-                        st.error(f"Error during model update: {e}")
-
+        
+            # Adding data for Incremental Learning
+            if st.button('Add Data for Learning'):
+                try:
+                    label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is inside the button's block
+        
+                    # Add label to the input data
+                    new_data = input_df.copy()
+                    new_data['label'] = label
+                    st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
+        
+                    accumulated_data = st.session_state['new_data']
+                    X = accumulated_data.drop(columns=['label'])
+                    y = accumulated_data['label'].astype(int)
+        
+                    st.write("Accumulated training data preview:")
+                    st.dataframe(accumulated_data)
+                    st.write(f"Features shape: {X.shape}, Labels shape: {y.shape}")
+                    st.write(f"Unique labels in training data: {y.unique()}")
+        
+                    if isinstance(current_model, RandomForestClassifier):
+                        current_model.fit(X, y)
+                        joblib.dump(current_model, 'tuned_rf_pre_BUN.pkl')  # Save the updated model
+                        st.success("RandomForestClassifier model updated successfully!")
+        
+                    elif isinstance(current_model, DynamicWeightedForest):
+                        new_tree = DecisionTreeClassifier(random_state=42)
+                        new_tree.fit(X, y)
+                        current_model.add_tree(new_tree)
+                        current_model.update_weights(X, y)
+                        current_model.save_model('global_weighted_forest.pkl')  # Save the updated DWF model
+                        st.success("DynamicWeightedForest model updated successfully!")
+        
+                except Exception as e:
+                    st.error(f"Error during model update: {e}")
 
             
         elif prediction_type == "Preoperative_batch":
