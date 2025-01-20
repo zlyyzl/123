@@ -362,53 +362,56 @@ def prediction_page():
             if st.button('Predict'):
                 try:
                     # Ensure the model is the correct type
+                    # 确保在所有路径中都定义 input_array
+                    input_array = input_df.values.reshape(1, -1)  # 将 DataFrame 转换为 2D 数组
+                    
+                    # 确保模型类型正确并执行预测
                     if isinstance(current_model, RandomForestClassifier):
                         output = current_model.predict_proba(input_array)
-        
-                        if output.shape[1] == 1:  # Only one class predicted
-                            st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
-                            output = np.hstack([1 - output, output])
-        
-                        probability = output[:, 1]
-        
-                        # SHAP for RandomForestClassifier
-                        explainer = shap.TreeExplainer(current_model)
-                        shap_values = explainer.shap_values(input_array)
-                        expected_value = explainer.expected_value[1] if isinstance(shap_values, list) else explainer.expected_value
-        
-                        # If shap_values is multi-output, select the index for the positive class (index 1)
-                        if isinstance(shap_values, list):
-                            shap_values = shap_values[1]  # For the positive class (index 1)
-        
-                    elif isinstance(current_model, DynamicWeightedForest):
-                        output = current_model.predict_proba(input_array)
-        
+                    
+                        # 检查是否只有一个类别被预测（例如：预测输出形状为 (n_samples, 1)）
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
-                            output = np.hstack([1 - output, output])
-        
-                        probability = output[:, 1]
-        
-                        # SHAP for DynamicWeightedForest
+                            output = np.hstack([1 - output, output])  # 补充缺失的类别概率
+                    
+                        probability = output[:, 1]  # 获取正类的概率
+                    
+                        # 使用 SHAP 对 RandomForestClassifier 进行解释
+                        explainer = shap.TreeExplainer(current_model)
+                        shap_values = explainer.shap_values(input_array)  # 获取 SHAP 值
+                        expected_value = explainer.expected_value[1]  # 获取正类的期望值
+                    
+                    elif isinstance(current_model, DynamicWeightedForest):
+                        output = current_model.predict_proba(input_array)
+                    
+                        # 检查是否只有一个类别被预测（例如：预测输出形状为 (n_samples, 1)）
+                        if output.shape[1] == 1:
+                            st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
+                            output = np.hstack([1 - output, output])  # 补充缺失的类别概率
+                    
+                        probability = output[:, 1]  # 获取正类的概率
+                    
+                        # 使用 SHAP 对 DynamicWeightedForest 进行解释
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
-        
-                        # Ensure that we are using the correct SHAP values
-                        if isinstance(shap_values, list):
-                            shap_values = shap_values[1]  # For the positive class (index 1)
-        
-                    st.write(f'Predicted probability of good functional outcome: {probability[0]:.4f}')
+                    
+                    # 显示预测结果
+                    st.write(f'Based on feature values, predicted probability of good functional outcome is: {probability[0]:.4f}')
+                    
+                    # 如果 shap_values 是多输出的，选择正类（索引 1）的 SHAP 值
+                    if isinstance(shap_values, list):
+                        shap_values = shap_values[1]  # 选择正类的 SHAP 值（索引 1）
+                    
+                    # 使用 force_plot 可视化 SHAP 值
                     st_shap(shap.force_plot(expected_value, shap_values, input_array))
-        
-                    shap_values_flat = shap_values.flatten()  # Flatten the array to ensure it's 1-dimensional
+                    
+                    # 确保 shap_values 为 1 维数组，以便创建 DataFrame
+                    shap_values_flat = shap_values.flatten()  # 将 SHAP 值展平为 1 维数组
                     shap_df = pd.DataFrame({
-                        'Feature': input_df.columns,
-                        'SHAP Value': shap_values_flat
+                        'Feature': input_df.columns,  # 输入特征列名
+                        'SHAP Value': shap_values_flat  # 对应的 SHAP 值
                     })
                     st.write("SHAP values for each feature:")
-                    st.dataframe(shap_df)
-        
-                except Exception as e:
-                    st.error(f"Error during prediction: {e}")
+                    st.dataframe(shap_df)  # 显示 SHAP 值的 DataFrame
 
 
             label = int(st.selectbox('Outcome for Learning', [0, 1]))
