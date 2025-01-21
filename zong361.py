@@ -424,8 +424,8 @@ def prediction_page():
                         st.write("SHAP values for each feature:")
                         st.dataframe(shap_df)
         
-                    except Exception as e:
-                        st.error(f"Error during prediction: {e}")
+                except Exception as e:
+                    st.error(f"Error during prediction: {e}")
 
         
             # Adding data for Incremental Learning
