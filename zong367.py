@@ -436,6 +436,9 @@ def prediction_page():
                         shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
                         components.html(shap_html, height=600)  # Ensure height is large enough for SHAP plots
 
+                except Exception as e:
+                    st.error(f"Error during prediction: {e}")
+
         
             # Adding data for Incremental Learning
             label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is outside the button's block
