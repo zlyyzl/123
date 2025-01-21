@@ -305,8 +305,7 @@ def prediction_page():
         if prediction_type == "Preoperative_number":
             st.subheader("Preoperative Number Prediction")
             st.write("Please fill in the blanks with corresponding data.")
-
-            # Function to load global model or initialize it
+            
             def load_global_model():
                 model_file = 'global_weighted_forest.pkl'  # 术前模型
                 st.write(f"Attempting to load global model: {model_file}")
@@ -320,7 +319,7 @@ def prediction_page():
                             st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
                             os.remove(model_file)
                     else:
-                        st.warning(f"Model file not found: {model_file}. Creating a new model.")
+                        st.warning(f"Model file not found: {model_file}. Creating a new model from base trees.")
                     
                     # Load initial model
                     initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
@@ -330,16 +329,38 @@ def prediction_page():
                     st.error(f"Failed to load or create global model: {e}")
                     return None
             
-            # Function to update the model with new data (Incremental learning)
+            # Function to reset the model
+            def reset_model():
+                # Load the initial model and store it in session state
+                current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # Load initial model
+                st.session_state['current_model'] = current_model  # Store the initial model in session state
+                st.session_state['new_data'] = pd.DataFrame()  # Clear the incremental learning data
+                st.write(f"Model reset to initial model: {type(current_model)}")
+                return current_model
+            
+            # Incremental learning function
             def update_incremental_learning_model(current_model, new_data):
                 # Ensure we have at least 10 samples before applying incremental learning
                 if len(new_data) >= 10:
-                    # Perform incremental learning here
                     X = new_data.drop(columns=['label'])
                     y = new_data['label']
             
-                    # For example, retrain or update model
-                    current_model.fit(X, y)
+                    # Create a new DecisionTreeClassifier without deprecated parameters
+                    new_tree = DecisionTreeClassifier(
+                        criterion='entropy',
+                        max_depth=2,
+                        max_features='auto',
+                        min_impurity_decrease=1e-8,  # Updated parameter
+                        min_samples_leaf=6,
+                        min_samples_split=3
+                    )
+            
+                    # Fit the new tree with the data
+                    new_tree.fit(X, y)
+            
+                    # Add the tree to the model
+                    current_model.add_tree(new_tree)
+                    current_model.update_weights(X, y)
             
                     # Optionally, save the updated model
                     current_model.save_model('global_weighted_forest.pkl')
@@ -347,122 +368,100 @@ def prediction_page():
                 else:
                     st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
             
-            # Reset to initial model
-            if st.button('Reset to Initial Model'):
-                st.session_state['new_data'] = pd.DataFrame()  # Clear incremental learning data
-                current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # Load initial model
-                st.session_state['current_model'] = current_model  # Store the initial model in session state
-                st.success("Model has been reset to the initial model!")
-                st.write(f"Loaded initial model: {type(current_model)}")
-            else:
-                # Use the loaded model from session state
-                if 'current_model' in st.session_state:
-                    current_model = st.session_state['current_model']
-                    st.write(f"Using model from session state: {type(current_model)}")  # Confirm the model type
+            # Main application logic
+            def main():
+                # Reset model functionality
+                if st.button('Reset to Initial Model'):
+                    current_model = reset_model()  # Reset to the initial model
+                    st.success("Model has been reset to the initial model!")
+                
                 else:
-                    current_model = load_global_model()  # Load the initial model
-                    st.write("Model loaded as no model was found in session state.")
-            
-            # Inputs for prediction
-            NIHSS = st.number_input('NIHSS', min_value = 4, max_value = 38, value = 10)
-            GCS = st.number_input('GCS', min_value = 0, max_value = 15, value = 10)
-            pre_eGFR = st.number_input('pre_eGFR', min_value = 10.00, max_value = 250.00, value = 111.5)
-            pre_glucose = st.number_input('pre_glucose', min_value = 2.50, max_value = 25.00, value = 7.78)
-            PC_ASPECTS = st.number_input('PC_ASPECTS', min_value = 0.0, max_value = 10.0, value = 8.0)
-            Age = st.number_input('Age', min_value = 0, max_value = 120, value = 60)
-            pre_BUN = st.number_input('pre_BUN', min_value = 0.00, max_value = 30.00, value = 10.20)
-            
-            features = {
-                'NIHSS': NIHSS,
-                'GCS': GCS,
-                'pre_eGFR': pre_eGFR,
-                'pre_glucose': pre_glucose,
-                'PC_ASPECTS': PC_ASPECTS,
-                'Age': Age,
-                'pre_BUN': pre_BUN
-            }
-            
-            input_df = pd.DataFrame([features])
-            
-            # Ensure there's a 'new_data' DataFrame in session_state
-            if 'new_data' not in st.session_state:
-                st.session_state['new_data'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
-            
-            # Prediction logic
-            if st.button('Predict'):
-                try:
-                    input_array = input_df.values.reshape(1, -1)
-            
-                    # For RandomForestClassifier
-                    if isinstance(current_model, RandomForestClassifier):
-                        output = current_model.predict_proba(input_array)
-                        if output.shape[1] == 1:
-                            st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
-                            output = np.hstack([1 - output, output])
-                        probability = output[:, 1]
-            
-                        # SHAP for RandomForestClassifier
-                        explainer = shap.TreeExplainer(current_model)
-                        shap_values = explainer.shap_values(input_array)
-                        expected_value = explainer.expected_value[1]
-            
-                    # For DynamicWeightedForest
-                    if isinstance(current_model, DynamicWeightedForest):
-                        if len(current_model.trees) == 0:
-                            st.warning("No trees found in the DynamicWeightedForest model!")
-                        
-                        output = current_model.predict_proba(input_array)
-                        if output.shape[1] == 1:
-                            st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
-                            output = np.hstack([1 - output, output])
-                        probability = output[:, 1]
-            
-                        # SHAP for DynamicWeightedForest
-                        shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
-            
-                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
-            
-                        shap_values_flat = shap_values.flatten()
-                        shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
-                        st.write("SHAP values for each feature:")
-                        st.dataframe(shap_df)
-            
-                except Exception as e:
-                    st.error(f"Error during prediction: {e}")
-            
-            # Adding data for Incremental Learning
-            label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is outside the button's block
-            
-            if st.button('Add Data for Learning'):
-                try:
-                    # Add label to the input data
-                    new_data = input_df.copy()
-                    new_data['label'] = label
-                    st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
-            
-                    accumulated_data = st.session_state['new_data']
-                    X = accumulated_data.drop(columns=['label'])
-                    y = accumulated_data['label'].astype(int)
-            
-                    st.write("Accumulated training data preview:")
-                    st.dataframe(accumulated_data)
-            
-                    if len(accumulated_data) >= 10:
-                        if isinstance(current_model, RandomForestClassifier):
-                            current_model.fit(X, y)
-                            joblib.dump(current_model, 'tuned_rf_pre_BUN.pkl')  # Save the updated model
-                            st.success("RandomForestClassifier model updated successfully!")
-                        elif isinstance(current_model, DynamicWeightedForest):
-                            new_tree = DecisionTreeClassifier(random_state=42)
-                            new_tree.fit(X, y)
-                            current_model.add_tree(new_tree)
-                            current_model.update_weights(X, y)
-                            current_model.save_model('global_weighted_forest.pkl')  # Save the updated DWF model
-                            st.success("DynamicWeightedForest model updated successfully!")
+                    # Use the model from session state
+                    if 'current_model' in st.session_state:
+                        current_model = st.session_state['current_model']
+                        st.write(f"Using model from session state: {type(current_model)}")  # Confirm the model type
                     else:
-                        st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
-                except Exception as e:
-                    st.error(f"Error during model update: {e}")
+                        current_model = load_global_model()  # Load initial model if not found in session state
+                        st.write("Model loaded as no model was found in session state.")
+                
+                # Input fields for prediction
+                NIHSS = st.number_input('NIHSS', min_value=4, max_value=38, value=10)
+                GCS = st.number_input('GCS', min_value=0, max_value=15, value=10)
+                pre_eGFR = st.number_input('pre_eGFR', min_value=10.00, max_value=250.00, value=111.5)
+                pre_glucose = st.number_input('pre_glucose', min_value=2.50, max_value=25.00, value=7.78)
+                PC_ASPECTS = st.number_input('PC_ASPECTS', min_value=0.0, max_value=10.0, value=8.0)
+                Age = st.number_input('Age', min_value=0, max_value=120, value=60)
+                pre_BUN = st.number_input('pre_BUN', min_value=0.00, max_value=30.00, value=10.20)
+            
+                features = { 
+                    'NIHSS': NIHSS, 
+                    'GCS': GCS, 
+                    'pre_eGFR': pre_eGFR,
+                    'pre_glucose': pre_glucose, 
+                    'PC_ASPECTS': PC_ASPECTS, 
+                    'Age': Age, 
+                    'pre_BUN': pre_BUN
+                }
+            
+                input_df = pd.DataFrame([features])
+            
+                # Ensure there's a 'new_data' DataFrame in session_state
+                if 'new_data' not in st.session_state:
+                    st.session_state['new_data'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
+            
+                # Prediction logic
+                if st.button('Predict'):
+                    try:
+                        input_array = input_df.values.reshape(1, -1)
+            
+                        # For RandomForestClassifier
+                        if isinstance(current_model, RandomForestClassifier):
+                            output = current_model.predict_proba(input_array)
+                            if output.shape[1] == 1:
+                                st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
+                                output = np.hstack([1 - output, output])
+                            probability = output[:, 1]
+            
+                        # Display the prediction result
+                        st.write(f'Based on feature values, predicted possibility of good functional outcome is {probability}')
+                    except Exception as e:
+                        st.error(f"Error during prediction: {e}")
+            
+                # Adding data for Incremental Learning
+                label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is outside the button's block
+            
+                if st.button('Add Data for Learning'):
+                    try:
+                        # Add label to the input data
+                        new_data = input_df.copy()
+                        new_data['label'] = label
+                        st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
+            
+                        accumulated_data = st.session_state['new_data']
+                        X = accumulated_data.drop(columns=['label'])
+                        y = accumulated_data['label'].astype(int)
+            
+                        st.write("Accumulated training data preview:")
+                        st.dataframe(accumulated_data)
+            
+                        # Incremental learning logic
+                        if len(accumulated_data) >= 10:
+                            if isinstance(current_model, RandomForestClassifier):
+                                current_model.fit(X, y)
+                                joblib.dump(current_model, 'tuned_rf_pre_BUN.pkl')  # Save the updated model
+                                st.success("RandomForestClassifier model updated successfully!")
+                            elif isinstance(current_model, DynamicWeightedForest):
+                                new_tree = DecisionTreeClassifier(random_state=42)
+                                new_tree.fit(X, y)
+                                current_model.add_tree(new_tree)
+                                current_model.update_weights(X, y)
+                                current_model.save_model('global_weighted_forest.pkl')  # Save the updated DWF model
+                                st.success("DynamicWeightedForest model updated successfully!")
+                        else:
+                            st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+            
+                    except Exception as e:
+                        st.error(f"Error during model update: {e}")
 
             
         elif prediction_type == "Preoperative_batch":
