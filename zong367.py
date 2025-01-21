@@ -369,12 +369,13 @@ def prediction_page():
         
             if 'new_data' not in st.session_state:
                 st.session_state['new_data'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
-        
+            
             # In the prediction logic, ensure 'current_model' is initialized
             if 'current_model' not in st.session_state:
                 st.session_state['current_model'] = joblib.load('tuned_rf_pre_BUN.pkl')  # or call load_global_model()
             
-            current_model = st.session_state['current_model']  # Access the model from session state
+            # Access the model from session state
+            current_model = st.session_state['current_model']  
             
             # Prediction logic after checking that current_model exists
             if st.button('Predict'):
@@ -410,7 +411,8 @@ def prediction_page():
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
             
                         # Visualize SHAP values using force plot
-                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
+                        shap_plot = shap.force_plot(expected_value, shap_values, input_array)
+                        st_shap(shap_plot)  # Display the SHAP force plot
             
                     # Ensure shap_values is 1D for visualization
                     if isinstance(shap_values, list):
@@ -418,6 +420,7 @@ def prediction_page():
                     elif isinstance(shap_values, np.ndarray):
                         shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
             
+                    # Show the flattened SHAP values
                     st.write(f"Flattened SHAP values: {shap_values}")
             
                     shap_values_flat = shap_values.flatten()
@@ -427,10 +430,14 @@ def prediction_page():
             
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
-
+            
+            # Add the missing function st_shap to display the plot properly
+            def st_shap(plot):
+                shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
+                components.html(shap_html, height=600)  # Ensure height is large enough for SHAP plots
+            
         
             # Adding data for Incremental Learning
-# Move label input outside of the button click block
             label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is outside the button's block
             
             if st.button('Add Data for Learning'):
