@@ -362,6 +362,7 @@ def prediction_page():
                 try:
                     input_array = input_df.values.reshape(1, -1)
             
+                    # For RandomForestClassifier
                     if isinstance(current_model, RandomForestClassifier):
                         output = current_model.predict_proba(input_array)
             
@@ -371,42 +372,51 @@ def prediction_page():
             
                         probability = output[:, 1]
             
+                        # SHAP for RandomForestClassifier
                         explainer = shap.TreeExplainer(current_model)
                         shap_values = explainer.shap_values(input_array)
                         expected_value = explainer.expected_value[1]
             
+                    # For DynamicWeightedForest
                     elif isinstance(current_model, DynamicWeightedForest):
+                        # Check if there are any trees in the model
+                        if len(current_model.trees) == 0:
+                            st.warning("No trees found in the DynamicWeightedForest model!")
+                        
                         output = current_model.predict_proba(input_array)
             
+                        # Ensure the output has the expected shape and is valid
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
                             output = np.hstack([1 - output, output])
             
                         probability = output[:, 1]
             
+                        # SHAP for DynamicWeightedForest
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
             
-                    st.write(f'Predicted probability of good functional outcome: {probability[0]:.4f}')
+                        # Debugging: Check the SHAP values after the update
+                        print(f"SHAP values: {shap_values}")
+                        print(f"Expected value: {expected_value}")
             
-                    # Debugging: Check the shape of shap_values and expected_value
-                    print(f"SHAP values: {shap_values}")
-                    print(f"Expected value: {expected_value}")
+                        # If shap_values is a list (for multi-output), use index 1 for the positive class
+                        if isinstance(shap_values, list):
+                            shap_values = shap_values[1]  # For the positive class (index 1)
+                            expected_value = expected_value[1]  # Adjust expected_value if necessary
+                        
+                        # If shap_values is an ndarray, flatten to 1D for visualization
+                        elif isinstance(shap_values, np.ndarray):
+                            shap_values = shap_values.flatten()
             
-                    # Ensure shap_values is 1D for visualization
-                    if isinstance(shap_values, list):
-                        shap_values = shap_values[1]  # Use the SHAP values for the positive class (index 1)
-                    elif isinstance(shap_values, np.ndarray):
-                        shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
+                        st.write(f"Flattened SHAP values: {shap_values}")
             
-                    st.write(f"Flattened SHAP values: {shap_values}")
+                        # Visualize SHAP values using force plot
+                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
             
-                    # Visualize SHAP values using force plot
-                    st_shap(shap.force_plot(expected_value, shap_values, input_array))
-            
-                    shap_values_flat = shap_values.flatten()  # Flatten SHAP values for DataFrame creation
-                    shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
-                    st.write("SHAP values for each feature:")
-                    st.dataframe(shap_df)
+                        shap_values_flat = shap_values.flatten()  # Flatten SHAP values for DataFrame creation
+                        shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
+                        st.write("SHAP values for each feature:")
+                        st.dataframe(shap_df)
             
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
@@ -627,9 +637,7 @@ def prediction_page():
 
                     probability = output[:, 1]
                     explainer = shap.Explainer(current_model)
-                    shap_values, expected_value = current_model.get_weighted_shap_values(input_df)
-
-                    st.write(f'Based on feature values, predicted probability of good functional outcome is: {probability[0]:.4f}')
+         
                     st_shap(shap.force_plot(expected_value, shap_values[0], input_df))
 
                     shap_df = pd.DataFrame({
