@@ -60,6 +60,12 @@ class DynamicWeightedForest:
             self.tree_weights[i] = accuracy
         self.tree_weights /= np.sum(self.tree_weights)
 
+    def clean_tree_params(tree):
+        # Remove deprecated parameters
+        valid_params = {key: value for key, value in tree.get_params().items() if key not in ["min_impurity_split"]}
+        tree.set_params(**valid_params)
+        return tree
+
     def add_tree(self, new_tree):
         # Explicitly set only valid parameters, removing outdated ones
         valid_params = {key: value for key, value in new_tree.get_params().items() if key != "min_impurity_split"}
