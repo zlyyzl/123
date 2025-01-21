@@ -306,6 +306,7 @@ def prediction_page():
             st.subheader("Preoperative Number Prediction")
             st.write("Please fill in the blanks with corresponding data.")
 
+            # Function to load global model or initialize it
             def load_global_model():
                 model_file = 'global_weighted_forest.pkl'  # 术前模型
                 st.write(f"Attempting to load global model: {model_file}")
@@ -321,7 +322,7 @@ def prediction_page():
                     else:
                         st.warning(f"Model file not found: {model_file}. Creating a new model.")
                     
-                    # 加载初始模型
+                    # Load initial model
                     initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
                     st.write("Initialized a new model from base trees.")
                     return DynamicWeightedForest(initial_model.estimators_)
@@ -329,6 +330,7 @@ def prediction_page():
                     st.error(f"Failed to load or create global model: {e}")
                     return None
             
+            # Function to update the model with new data (Incremental learning)
             def update_incremental_learning_model(current_model, new_data):
                 # Ensure we have at least 10 samples before applying incremental learning
                 if len(new_data) >= 10:
@@ -341,48 +343,51 @@ def prediction_page():
             
                     # Optionally, save the updated model
                     current_model.save_model('global_weighted_forest.pkl')
-                    print("Model updated successfully with incremental learning.")
+                    st.write("Model updated successfully with incremental learning.")
                 else:
-                    print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
-
+                    st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+            
+            # Reset to initial model
             if st.button('Reset to Initial Model'):
-                # Reset everything and load the initial model directly
-                st.session_state['new_data'] = pd.DataFrame()  # 清空增量学习的数据
-                current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # 直接加载初始模型
-                st.session_state['current_model'] = current_model  # 将初始模型存储到 session state
+                st.session_state['new_data'] = pd.DataFrame()  # Clear incremental learning data
+                current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # Load initial model
+                st.session_state['current_model'] = current_model  # Store the initial model in session state
                 st.success("Model has been reset to the initial model!")
+                st.write(f"Loaded initial model: {type(current_model)}")
             else:
-                # 使用之前加载的模型
+                # Use the loaded model from session state
                 if 'current_model' in st.session_state:
                     current_model = st.session_state['current_model']
-                    st.write(f"Using model from session state: {type(current_model)}")  # 打印模型类型，确认是正确的模型
+                    st.write(f"Using model from session state: {type(current_model)}")  # Confirm the model type
                 else:
-                    current_model = load_global_model()  # 加载初始模型
-                    st.write("Model loaded as no model was found in session state.")  # 输出模型加载信息
+                    current_model = load_global_model()  # Load the initial model
+                    st.write("Model loaded as no model was found in session state.")
             
-            NIHSS = st.number_input('NIHSS', min_value = 4, max_value = 38, value = 10) 
-            GCS = st.number_input('GCS', min_value = 0, max_value = 15 , value = 10) 
+            # Inputs for prediction
+            NIHSS = st.number_input('NIHSS', min_value = 4, max_value = 38, value = 10)
+            GCS = st.number_input('GCS', min_value = 0, max_value = 15, value = 10)
             pre_eGFR = st.number_input('pre_eGFR', min_value = 10.00, max_value = 250.00, value = 111.5)
             pre_glucose = st.number_input('pre_glucose', min_value = 2.50, max_value = 25.00, value = 7.78)
             PC_ASPECTS = st.number_input('PC_ASPECTS', min_value = 0.0, max_value = 10.0, value = 8.0)
             Age = st.number_input('Age', min_value = 0, max_value = 120, value = 60)
             pre_BUN = st.number_input('pre_BUN', min_value = 0.00, max_value = 30.00, value = 10.20)
-        
-            features = { 
-                'NIHSS': NIHSS, 
-                'GCS': GCS, 
+            
+            features = {
+                'NIHSS': NIHSS,
+                'GCS': GCS,
                 'pre_eGFR': pre_eGFR,
-                'pre_glucose': pre_glucose, 
-                'PC_ASPECTS': PC_ASPECTS, 
-                'Age': Age, 
+                'pre_glucose': pre_glucose,
+                'PC_ASPECTS': PC_ASPECTS,
+                'Age': Age,
                 'pre_BUN': pre_BUN
             }
-        
+            
             input_df = pd.DataFrame([features])
-        
+            
+            # Ensure there's a 'new_data' DataFrame in session_state
             if 'new_data' not in st.session_state:
                 st.session_state['new_data'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
-        
+            
             # Prediction logic
             if st.button('Predict'):
                 try:
@@ -391,11 +396,9 @@ def prediction_page():
                     # For RandomForestClassifier
                     if isinstance(current_model, RandomForestClassifier):
                         output = current_model.predict_proba(input_array)
-            
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
                             output = np.hstack([1 - output, output])
-            
                         probability = output[:, 1]
             
                         # SHAP for RandomForestClassifier
@@ -405,50 +408,29 @@ def prediction_page():
             
                     # For DynamicWeightedForest
                     if isinstance(current_model, DynamicWeightedForest):
-                        # Check if there are any trees in the model
                         if len(current_model.trees) == 0:
                             st.warning("No trees found in the DynamicWeightedForest model!")
                         
                         output = current_model.predict_proba(input_array)
-                        
-                        # Ensure the output has the expected shape and is valid
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
                             output = np.hstack([1 - output, output])
-                    
                         probability = output[:, 1]
-                    
+            
                         # SHAP for DynamicWeightedForest
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
-                        
-                        # Debugging: Check the output of the DynamicWeightedForest model
-                        print(f"Incremental learning model output: {output}")
-                        print(f"SHAP values: {shap_values}")
-                        print(f"Expected value: {expected_value}")
-                    
-                        # Visualize SHAP values using force plot
+            
                         st_shap(shap.force_plot(expected_value, shap_values, input_array))
-                    
-                        # Ensure shap_values is 1D for visualization
-                        if isinstance(shap_values, list):
-                            shap_values = shap_values[1]  # Use the SHAP values for the positive class (index 1)
-                        elif isinstance(shap_values, np.ndarray):
-                            shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
-                    
-                        st.write(f"Flattened SHAP values: {shap_values}")
-                    
+            
                         shap_values_flat = shap_values.flatten()
                         shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
                         st.write("SHAP values for each feature:")
                         st.dataframe(shap_df)
-
-        
+            
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
-
-        
+            
             # Adding data for Incremental Learning
-# Move label input outside of the button click block
             label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is outside the button's block
             
             if st.button('Add Data for Learning'):
@@ -464,10 +446,7 @@ def prediction_page():
             
                     st.write("Accumulated training data preview:")
                     st.dataframe(accumulated_data)
-                    st.write(f"Features shape: {X.shape}, Labels shape: {y.shape}")
-                    st.write(f"Unique labels in training data: {y.unique()}")
             
-                    # Check if there are at least 10 samples before updating the model
                     if len(accumulated_data) >= 10:
                         if isinstance(current_model, RandomForestClassifier):
                             current_model.fit(X, y)
