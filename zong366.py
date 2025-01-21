@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import base64
@@ -90,7 +91,7 @@ self, X):
         else:
             st.error(f"Model file {model_name} not found.")
             return None
-            
+
 def reset_model():
     # 直接加载初始模型
     current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # 直接加载初始模型
@@ -332,6 +333,21 @@ def prediction_page():
         model4 = load_model('tuned_rf_intra_BUN_model')
         model5 = joblib.load('tuned_rf_post_BUN.pkl')
         model6 = load_model('tuned_rf_post_BUN_model')
+        
+        if st.button('Reset to Initial Model'):
+            # Reset everything and load the initial model directly
+            st.session_state['new_data'] = pd.DataFrame()  # 清空增量学习的数据
+            current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # 直接加载初始模型
+            st.session_state['current_model'] = current_model  # 将初始模型存储到 session state
+            st.success("Model has been reset to the initial model!")
+        else:
+            # 使用之前加载的模型
+            if 'current_model' in st.session_state:
+                current_model = st.session_state['current_model']
+                st.write(f"Using model from session state: {type(current_model)}")  # 打印模型类型，确认是正确的模型
+            else:
+                current_model = load_global_model()  # 加载初始模型
+                st.write("Model loaded as no model was found in session state.")  # 输出模型加载信息
 
         def st_shap(plot):
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
@@ -1047,4 +1063,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
