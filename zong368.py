@@ -30,28 +30,19 @@ print(tree.get_params())
 class DynamicWeightedForest:
     def __call__(self, X):
         return self.predict_proba(X)
-                
+
     def __init__(self, base_trees):
         self.trees = base_trees
         self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
 
-    def predict_proba(
-self, X):
+    def predict_proba(self, X):
         weighted_votes = np.zeros((X.shape[0], 2))  # Ensure the output is always (n_samples, 2)
-        
         for i, tree in enumerate(self.trees):
             proba = tree.predict_proba(X)
-            
-            print(f"Tree {i} proba shape: {proba.shape}")
-            print(f"Tree {i} proba: {proba}") 
-        
             if proba.shape[1] == 1:
                 proba = np.hstack([1 - proba, proba])  # Add missing class probability
-            
             weighted_votes += self.tree_weights[i] * proba
-
         return weighted_votes / np.sum(self.tree_weights)
-
 
     def get_weighted_shap_values(self, X):
         shap_values_sum = np.zeros((X.shape[0], X.shape[1]))
@@ -62,45 +53,30 @@ self, X):
             expected_value_tree = explainer.expected_value[1]
             shap_values_sum += weight * shap_values_tree
             expected_value_sum += weight * expected_value_tree
-        print(f"Final SHAP values sum: {shap_values_sum}")
-        print(f"Final expected value sum: {expected_value_sum}")
         return shap_values_sum, expected_value_sum
 
-
     def update_weights(self, X, y):
+        # Update the weights based on tree performance
         for i, tree in enumerate(self.trees):
             predictions = tree.predict(X)
             accuracy = np.mean(predictions == y)
             self.tree_weights[i] = accuracy
         self.tree_weights /= np.sum(self.tree_weights)
-        print(f"Updated tree weights: {self.tree_weights}") 
 
     def add_tree(self, new_tree):
-        # Ensure no deprecated parameters like min_impurity_split are passed
-        valid_params = {key: value for key, value in new_tree.get_params().items() if key != "min_impurity_split"}
-        new_tree.set_params(**valid_params)
-        
-        # Add the tree to the model
+        # Add new tree to the model
         self.trees.append(new_tree)
         self.tree_weights = np.append(self.tree_weights, [1.0])
         self.tree_weights /= np.sum(self.tree_weights)
-        
-        # Debugging: Check the shape after adding a new tree
-        print(f"After adding new tree, number of trees: {len(self.trees)}")
-
 
     def save_model(self, model_name):
-        st.write(f"Saving model to {model_name}")  
         joblib.dump(self, model_name)
-            
+
     @staticmethod
     def load_model(model_name):
-        st.write(f"Loading model from {model_name}")  
         if os.path.exists(model_name):
             return joblib.load(model_name)
-        else:
-            st.error(f"Model file {model_name} not found.")
-            return None
+        return None
 
 def load_global_model2():
     model_file = 'global_weighted_forest2.pkl'  # 术中模型
@@ -342,32 +318,33 @@ def prediction_page():
                 current_model = reset_model()
                 st.success("Model has been reset to the initial model!")
 
+            # Incremental Learning Function
             def update_incremental_learning_model(current_model, new_data):
                 if len(new_data) >= 10:
                     X = new_data.drop(columns=['label'])
                     y = new_data['label']
-                    
-                    # Create a new DecisionTreeClassifier without deprecated parameters
+            
+                    # Create a new tree (from scratch, no parameters carried over)
                     new_tree = DecisionTreeClassifier(
                         criterion='entropy',
                         max_depth=2,
-                        max_features='auto',
-                        min_impurity_decrease=1e-8,  # New parameter instead of min_impurity_split
+                        max_features='auto',  # Use auto for random features selection
+                        min_impurity_decrease=1e-8,  # Updated parameter for clarity
                         min_samples_leaf=6,
                         min_samples_split=3
                     )
-                    
+            
                     new_tree.fit(X, y)
-                    
-                    # Add the new tree to the model
+            
+                    # Add the newly created tree to the model and update the weights
                     current_model.add_tree(new_tree)
                     current_model.update_weights(X, y)
-                    
+            
                     # Optionally, save the updated model
                     current_model.save_model('global_weighted_forest.pkl')
-                    st.write("Model updated successfully with incremental learning.")
+                    print("Model updated successfully with incremental learning.")
                 else:
-                    st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+                    print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
 
 
             
