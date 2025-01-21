@@ -91,7 +91,7 @@ self, X):
         else:
             st.error(f"Model file {model_name} not found.")
             return None
-
+st.set_page_config(page_title="My Application", layout="centered")
 def reset_model():
     # 直接加载初始模型
     current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # 直接加载初始模型
