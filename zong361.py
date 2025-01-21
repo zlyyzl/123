@@ -398,15 +398,13 @@ def prediction_page():
                         # SHAP for DynamicWeightedForest
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
                         
-                        # Debugging: Check the SHAP values after the update
+                        # Debugging: Check the output of the DynamicWeightedForest model
+                        print(f"Incremental learning model output: {output}")
                         print(f"SHAP values: {shap_values}")
                         print(f"Expected value: {expected_value}")
                     
-                        if shap_values is None:
-                            st.warning("No SHAP values returned!")
-                        else:
-                            # Visualize SHAP values using force plot
-                            st_shap(shap.force_plot(expected_value, shap_values, input_array))
+                        # Visualize SHAP values using force plot
+                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
                     
                         # Ensure shap_values is 1D for visualization
                         if isinstance(shap_values, list):
@@ -416,13 +414,11 @@ def prediction_page():
                     
                         st.write(f"Flattened SHAP values: {shap_values}")
                     
-                        # Visualize SHAP values using force plot
-                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
-                    
-                        shap_values_flat = shap_values.flatten()  # Flatten SHAP values for DataFrame creation
+                        shap_values_flat = shap_values.flatten()
                         shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
                         st.write("SHAP values for each feature:")
                         st.dataframe(shap_df)
+
         
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
