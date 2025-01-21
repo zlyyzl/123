@@ -332,6 +332,7 @@ def prediction_page():
             print(f"Model after reset: {type(current_model)}")
             st.success("Model has been reset to the initial model!")
             st.write("Initial model reset successful!")
+            input_df = None  
         else:
             # 使用之前加载的模型
             if 'current_model' in st.session_state:
