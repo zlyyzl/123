@@ -24,19 +24,19 @@ from sklearn.ensemble import RandomForestClassifier
 
 class DynamicWeightedForest:
     def __call__(self, X):
-        print(f"Predicting with model: {type(self)}")
         return self.predict_proba(X)
-
+                
     def __init__(self, base_trees):
         self.trees = base_trees
         self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
-        print(f"Initialized DynamicWeightedForest with {len(self.trees)} trees.")
 
-    def predict_proba(self, X):
+    def predict_proba(
+self, X):
         weighted_votes = np.zeros((X.shape[0], 2))  # Ensure the output is always (n_samples, 2)
         
         for i, tree in enumerate(self.trees):
             proba = tree.predict_proba(X)
+            
             print(f"Tree {i} proba shape: {proba.shape}")
             print(f"Tree {i} proba: {proba}") 
         
@@ -45,8 +45,8 @@ class DynamicWeightedForest:
             
             weighted_votes += self.tree_weights[i] * proba
 
-        print(f"Weighted votes: {weighted_votes}")
         return weighted_votes / np.sum(self.tree_weights)
+
 
     def get_weighted_shap_values(self, X):
         shap_values_sum = np.zeros((X.shape[0], X.shape[1]))
@@ -61,24 +61,27 @@ class DynamicWeightedForest:
         print(f"Final expected value sum: {expected_value_sum}")
         return shap_values_sum, expected_value_sum
 
+
     def update_weights(self, X, y):
         for i, tree in enumerate(self.trees):
             predictions = tree.predict(X)
             accuracy = np.mean(predictions == y)
             self.tree_weights[i] = accuracy
         self.tree_weights /= np.sum(self.tree_weights)
-        print(f"Updated tree weights: {self.tree_weights}")
+        print(f"Updated tree weights: {self.tree_weights}") 
 
     def add_tree(self, new_tree):
         self.trees.append(new_tree)
         self.tree_weights = np.append(self.tree_weights, [1.0])
         self.tree_weights /= np.sum(self.tree_weights)
+    
+        # Debugging: Check the shape after adding a new tree
         print(f"After adding new tree, number of trees: {len(self.trees)}")
 
     def save_model(self, model_name):
         st.write(f"Saving model to {model_name}")  
         joblib.dump(self, model_name)
-
+            
     @staticmethod
     def load_model(model_name):
         st.write(f"Loading model from {model_name}")  
@@ -88,8 +91,6 @@ class DynamicWeightedForest:
             st.error(f"Model file {model_name} not found.")
             return None
 
-
-# This function is responsible for loading the global model
 def load_global_model():
     model_file = 'global_weighted_forest.pkl'
     print(f"Attempting to load global model: {model_file}")
@@ -111,9 +112,15 @@ def load_global_model():
     except Exception as e:
         st.error(f"Failed to load or create global model: {e}")
         return None
+        
+        # 加载初始模型
+        initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
+        st.write("Initialized a new model from base trees.")
+        return DynamicWeightedForest(initial_model.estimators_)
+    except Exception as e:
+        st.error(f"Failed to load or create global model: {e}")
+        return None
 
-
-# Adding incremental learning model update functionality
 def update_incremental_learning_model(current_model, new_data):
     print("Attempting incremental learning...")
     if len(new_data) >= 10:
@@ -125,6 +132,30 @@ def update_incremental_learning_model(current_model, new_data):
         print("Model updated successfully with incremental learning.")
     else:
         print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+
+
+def load_global_model2():
+    model_file = 'global_weighted_forest2.pkl'  # 术中模型
+    st.write(f"Attempting to load global model: {model_file}")
+    try:
+        if os.path.exists(model_file):
+            try:
+                model = DynamicWeightedForest.load_model(model_file)
+                st.write(f"Model loaded successfully: {model_file}")
+                return model
+            except EOFError:
+                st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
+                os.remove(model_file)
+        else:
+            st.warning(f"Model file not found: {model_file}. Creating a new model.")
+        
+        # 加载术中初始模型
+        initial_model = joblib.load('tuned_rf_intra_BUN.pkl')
+        st.write("Initialized a new model from base trees.")
+        return DynamicWeightedForest(initial_model.estimators_)
+    except Exception as e:
+        st.error(f"Failed to load or create global model: {e}")
+        return None
 
 def get_db_connection():
     conn = sqlite3.connect('users.db')
@@ -180,18 +211,124 @@ def login_page():
             else:
                 st.error("Invalid username or password.")
 
-# Streamlit page for prediction
+def register_page():
+    st.title("User Registration")
+
+    with st.form("register_form"):
+        new_username = st.text_input("New Username")
+        new_password = st.text_input("New Password", type="password")
+        register_button = st.form_submit_button("Register")
+
+        if register_button:
+            if register_user(new_username, new_password):
+                st.success("Registration successful! Please log in.")
+            else:
+                st.error("That username is already taken. Please try another username.")
+                
 def prediction_page():
     import streamlit as st
+
+    # Set the page title
+    st.set_page_config(page_title="My Application", layout="centered")
+
+
     page = st.sidebar.selectbox("Select a Page", ["Home Page", "Prediction"])
 
     if page == "Home Page":
-        st.title("Welcome to Functional Outcome Prediction")
+        st.title("Welcome to Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy")
+    
         st.header("Summary")
-    elif page == "Prediction":
-        st.title('Functional Outcome Prediction for Posterior Circulation Large Vessel Occlusion after Mechanical Thrombectomy')
+        st.write("""
+            This application aims to predict functional outcome in  patients with posterior circulation large vessel occlusion following mechanical thrombectomy，thus facilitates informed clinical judgment, supports personalized treatment and follow-up plans, and establishes realistic treatment expectations.
+        """)
 
+        st.header("Main Features")
+        features = [
+            "✔️ Implementation of preoperative, intraoperative, and postoperative prediction models to dynamically update predictions of functional outcomes.",
+            "✔️ Support for batch predictions of functional outcomes for multiple patients.",
+            "✔️ Ability to predict outcomes for patients with missing variable values.",
+            "✔️ Facilitation of the interpretation of how the model provides personalized predictions for specific cases.",
+            "✔️ Consideration of changing environments with automatic deployment of updated prediction models."
+        ]
+        for feature in features:
+            st.write(feature)
+
+        st.header("How to Use")
+        st.markdown("""
+            To the left, is a dropdown main menu for navigating to each page in the present App:<br><br>
+            
+            &bull; **Home Page:** We are here!<br>
+            
+            &bull; **Prediction:** Overview of the prediction section.<br>
+            
+            &bull; **Preoperative_number:** Manage preoperative predictions by inputting the necessary data.<br>
+            
+            &bull; **Preoperative_batch:** Process preoperative batch predictions by uploading a file.<br>
+            
+            &bull; **Perioperative_number:** Manage perioperative predictions by inputting the necessary data.<br>
+            
+            &bull; **Perioperative_batch:** Process perioperative batch predictions by uploading a file.<br>
+            
+            &bull; **Postoperative_number:** Manage postoperative predictions by inputting the necessary data.<br>
+            
+            &bull; **Postoperative_batch:** Process postoperative batch predictions by uploading a file.<br>
+            
+            """, unsafe_allow_html=True)
+
+        pdf_file_path = r"123.pdf"
+        if os.path.exists(pdf_file_path):
+            st.markdown("Click here to download the manual for more detailed usage instructions:")
+            with open(pdf_file_path, "rb") as f:
+                st.download_button(label="User Manual.pdf",data=f, file_name="User Manual.pdf",mime="application/pdf" )
+        else:
+            st.error("指定的文件不存在，请检查文件路径。")
+        
+        st.header("Contact Us")
+        st.write("""
+            If you have any questions, please contact the support team:
+            - Email: 2894683001@qq.com
+            
+        """)
+        
+        st.header("Useful Links")
+        st.markdown(
+        """
+        An app designed to predict functional outcomes for patients with anterior circulation large vessel occlusion following mechanical thrombectomy:
+         - [Visit our partner site](https://zhelvyao-123-60-anterior.streamlit.app/)
+         """)
+
+        st.markdown(
+            f"""
+            <style>
+                .appview-container .main .block-container{{
+                    max-width: {1150}px;
+                    padding-top: {5}rem;
+                    padding-right: {10}rem;
+                    padding-left: {10}rem;
+                    padding-bottom: {5}rem;
+                }}
+                .reportview-container .main {{
+                    color: white;
+                    background-color: black;
+                }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+    
+        image = Image.open('it.tif')
+        st.image(image, use_column_width=True)
+
+
+    elif page == "Prediction":
+        st.title('Functional outcome prediction App for patients with posterior circulation large vessel occlusion after mechanical thrombectomy')
+    
         model = joblib.load('tuned_rf_pre_BUN.pkl')
+        model2 = load_model('tuned_rf_pre_BUN_model')
+        model3 = joblib.load('tuned_rf_intra_BUN.pkl')
+        model4 = load_model('tuned_rf_intra_BUN_model')
+        model5 = joblib.load('tuned_rf_post_BUN.pkl')
+        model6 = load_model('tuned_rf_post_BUN_model')
         
         if st.button('Reset to Initial Model'):
             # Reset everything and load the initial model
@@ -215,41 +352,145 @@ def prediction_page():
                 current_model = load_global_model()  
                 print("Model loaded as no model was found in session state.")
 
-        # Prediction logic (ensure features are properly collected)
-        prediction_type = st.sidebar.selectbox("How would you like to predict?", ["Preoperative_number", "Postoperative_batch"])
+        def st_shap(plot):
+            shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
+            components.html(shap_html)
 
+        prediction_type = st.sidebar.selectbox(
+            "How would you like to predict?",
+            ("Preoperative_number", "Preoperative_batch", "Intraoperative_number", "Intraoperative_batch", 
+             "Postoperative_number", "Postoperative_batch")
+        )
+    
+                
         if prediction_type == "Preoperative_number":
-            features = {
-                'NIHSS': st.number_input('NIHSS', min_value=4, max_value=38, value=10), 
-                'GCS': st.number_input('GCS', min_value=0, max_value=15 , value=10),
-                'pre_eGFR': st.number_input('pre_eGFR', min_value=10.00, max_value=250.00, value=111.5),
-                'pre_glucose': st.number_input('pre_glucose', min_value=2.50, max_value=25.00, value=7.78),
-                'PC_ASPECTS': st.number_input('PC_ASPECTS', min_value=0.0, max_value=10.0, value=8.0),
-                'Age': st.number_input('Age', min_value=0, max_value=120, value=60),
-                'pre_BUN': st.number_input('pre_BUN', min_value=0.00, max_value=30.00, value=10.20)
-            }
+            st.subheader("Preoperative Number Prediction")
+            st.write("Please fill in the blanks with corresponding data.")
             
+            NIHSS = st.number_input('NIHSS', min_value = 4, max_value = 38, value = 10) 
+            GCS = st.number_input('GCS', min_value = 0, max_value = 15 , value = 10) 
+            pre_eGFR = st.number_input('pre_eGFR', min_value = 10.00, max_value = 250.00, value = 111.5)
+            pre_glucose = st.number_input('pre_glucose', min_value = 2.50, max_value = 25.00, value = 7.78)
+            PC_ASPECTS = st.number_input('PC_ASPECTS', min_value = 0.0, max_value = 10.0, value = 8.0)
+            Age = st.number_input('Age', min_value = 0, max_value = 120, value = 60)
+            pre_BUN = st.number_input('pre_BUN', min_value = 0.00, max_value = 30.00, value = 10.20)
+        
+            features = { 
+                'NIHSS': NIHSS, 
+                'GCS': GCS, 
+                'pre_eGFR': pre_eGFR,
+                'pre_glucose': pre_glucose, 
+                'PC_ASPECTS': PC_ASPECTS, 
+                'Age': Age, 
+                'pre_BUN': pre_BUN
+            }
+        
             input_df = pd.DataFrame([features])
-
+        
+            if 'new_data' not in st.session_state:
+                st.session_state['new_data'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
+        
+            # Prediction logic
             if st.button('Predict'):
                 try:
                     input_array = input_df.values.reshape(1, -1)
-                    output = current_model.predict_proba(input_array)
-                    st.write(f"Prediction output: {output}")
+            
+                    # For RandomForestClassifier
+                    if isinstance(current_model, RandomForestClassifier):
+                        output = current_model.predict_proba(input_array)
+            
+                        if output.shape[1] == 1:
+                            st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
+                            output = np.hstack([1 - output, output])
+            
+                        probability = output[:, 1]
+            
+                        # SHAP for RandomForestClassifier
+                        explainer = shap.TreeExplainer(current_model)
+                        shap_values = explainer.shap_values(input_array)
+                        expected_value = explainer.expected_value[1]
+            
+                    # For DynamicWeightedForest
+                    if isinstance(current_model, DynamicWeightedForest):
+                        # Check if there are any trees in the model
+                        if len(current_model.trees) == 0:
+                            st.warning("No trees found in the DynamicWeightedForest model!")
+                        
+                        output = current_model.predict_proba(input_array)
+                        
+                        # Ensure the output has the expected shape and is valid
+                        if output.shape[1] == 1:
+                            st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
+                            output = np.hstack([1 - output, output])
+                    
+                        probability = output[:, 1]
+                    
+                        # SHAP for DynamicWeightedForest
+                        shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
+                        
+                        # Debugging: Check the output of the DynamicWeightedForest model
+                        print(f"Incremental learning model output: {output}")
+                        print(f"SHAP values: {shap_values}")
+                        print(f"Expected value: {expected_value}")
+                    
+                        # Visualize SHAP values using force plot
+                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
+                    
+                        # Ensure shap_values is 1D for visualization
+                        if isinstance(shap_values, list):
+                            shap_values = shap_values[1]  # Use the SHAP values for the positive class (index 1)
+                        elif isinstance(shap_values, np.ndarray):
+                            shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
+                    
+                        st.write(f"Flattened SHAP values: {shap_values}")
+                    
+                        shap_values_flat = shap_values.flatten()
+                        shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
+                        st.write("SHAP values for each feature:")
+                        st.dataframe(shap_df)
+
+        
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
 
-        # Incremental learning
-        label = int(st.selectbox('Outcome for Learning', [0, 1]))
-        if st.button('Add Data for Learning'):
-            try:
-                new_data = input_df.copy()
-                new_data['label'] = label
-                st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
-                update_incremental_learning_model(current_model, st.session_state['new_data'])
-            except Exception as e:
-                st.error(f"Error during model update: {e}")
-
+        
+            # Adding data for Incremental Learning
+# Move label input outside of the button click block
+            label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is outside the button's block
+            
+            if st.button('Add Data for Learning'):
+                try:
+                    # Add label to the input data
+                    new_data = input_df.copy()
+                    new_data['label'] = label
+                    st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
+            
+                    accumulated_data = st.session_state['new_data']
+                    X = accumulated_data.drop(columns=['label'])
+                    y = accumulated_data['label'].astype(int)
+            
+                    st.write("Accumulated training data preview:")
+                    st.dataframe(accumulated_data)
+                    st.write(f"Features shape: {X.shape}, Labels shape: {y.shape}")
+                    st.write(f"Unique labels in training data: {y.unique()}")
+            
+                    # Check if there are at least 10 samples before updating the model
+                    if len(accumulated_data) >= 10:
+                        if isinstance(current_model, RandomForestClassifier):
+                            current_model.fit(X, y)
+                            joblib.dump(current_model, 'tuned_rf_pre_BUN.pkl')  # Save the updated model
+                            st.success("RandomForestClassifier model updated successfully!")
+                        elif isinstance(current_model, DynamicWeightedForest):
+                            new_tree = DecisionTreeClassifier(random_state=42)
+                            new_tree.fit(X, y)
+                            current_model.add_tree(new_tree)
+                            current_model.update_weights(X, y)
+                            current_model.save_model('global_weighted_forest.pkl')  # Save the updated DWF model
+                            st.success("DynamicWeightedForest model updated successfully!")
+                    else:
+                        st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+                except Exception as e:
+                    st.error(f"Error during model update: {e}")
 
             
         elif prediction_type == "Preoperative_batch":
