@@ -331,11 +331,16 @@ def prediction_page():
             st.session_state['current_model'] = current_model  # 将初始模型存储到 session state
             print(f"Model after reset: {type(current_model)}")
             st.success("Model has been reset to the initial model!")
+            st.write("Initial model reset successful!")
         else:
             # 使用之前加载的模型
             if 'current_model' in st.session_state:
                 current_model = st.session_state['current_model']
-                st.write(f"Using model from session state: {type(current_model)}")  # 打印模型类型，确认是正确的模型
+                st.write(f"Using model from session state: {type(current_model)}") # 打印模型类型，确认是正确的模型
+                if input_df is not None:
+                    output = current_model.predict(input_df)  # Check if input_df is properly defined
+                else:
+                    st.warning("No input data provided for prediction.")
             else:
                 current_model = load_global_model()  # 加载初始模型
                 st.write("Model loaded as no model was found in session state.")  # 输出模型加载信息
