@@ -22,6 +22,11 @@ import openpyxl
 import os
 from sklearn.ensemble import RandomForestClassifier
 
+from sklearn.tree import DecisionTreeClassifier
+tree = DecisionTreeClassifier()
+print(tree.get_params())
+
+
 class DynamicWeightedForest:
     def __call__(self, X):
         return self.predict_proba(X)
