@@ -368,9 +368,10 @@ def prediction_page():
             
                     # Optionally, save the updated model
                     current_model.save_model('global_weighted_forest.pkl')
-                    print("Model updated successfully with incremental learning.")
+                    st.write("Model updated successfully with incremental learning.")
                 else:
-                    print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+                    st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+
             
             NIHSS = st.number_input('NIHSS', min_value = 4, max_value = 38, value = 10) 
             GCS = st.number_input('GCS', min_value = 0, max_value = 15 , value = 10) 
