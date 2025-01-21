@@ -91,48 +91,51 @@ self, X):
             st.error(f"Model file {model_name} not found.")
             return None
 
+def reset_model():
+    # 直接加载初始模型
+    current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # 直接加载初始模型
+    st.session_state['current_model'] = current_model  # 将初始模型存储到 session state
+    st.session_state['new_data'] = pd.DataFrame()  # 清空增量学习的数据
+    st.write(f"Model reset to initial model: {type(current_model)}")
+    return current_model
+
 def load_global_model():
     model_file = 'global_weighted_forest.pkl'
-    print(f"Attempting to load global model: {model_file}")
+    st.write(f"Attempting to load global model: {model_file}")
     try:
         if os.path.exists(model_file):
-            try:
-                model = DynamicWeightedForest.load_model(model_file)
-                print(f"Model loaded successfully: {model_file}")
-                return model
-            except EOFError:
-                print(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
-                os.remove(model_file)
+            model = DynamicWeightedForest.load_model(model_file)
+            st.write(f"Model loaded successfully: {model_file}")
+            return model
         else:
-            print(f"Model file not found: {model_file}. Creating a new model.")
-        
-        initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
-        print("Initialized a new model from base trees.")
-        return DynamicWeightedForest(initial_model.estimators_)
-    except Exception as e:
-        st.error(f"Failed to load or create global model: {e}")
-        return None
-        
-        # 加载初始模型
-        initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
-        st.write("Initialized a new model from base trees.")
-        return DynamicWeightedForest(initial_model.estimators_)
+            st.warning(f"Model file not found: {model_file}. Creating a new model from base trees.")
+            initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
+            return DynamicWeightedForest(initial_model.estimators_)
     except Exception as e:
         st.error(f"Failed to load or create global model: {e}")
         return None
 
+# 调用重置模型的代码
+if st.button('Reset to Initial Model'):
+    current_model = reset_model()
+    st.success("Model has been reset to the initial model!")
+
+
 def update_incremental_learning_model(current_model, new_data):
-    print("Attempting incremental learning...")
+    # Ensure we have at least 10 samples before applying incremental learning
     if len(new_data) >= 10:
+        # Perform incremental learning here
         X = new_data.drop(columns=['label'])
         y = new_data['label']
 
+        # For example, retrain or update model
         current_model.fit(X, y)
+
+        # Optionally, save the updated model
         current_model.save_model('global_weighted_forest.pkl')
         print("Model updated successfully with incremental learning.")
     else:
         print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
-
 
 def load_global_model2():
     model_file = 'global_weighted_forest2.pkl'  # 术中模型
@@ -329,7 +332,7 @@ def prediction_page():
         model4 = load_model('tuned_rf_intra_BUN_model')
         model5 = joblib.load('tuned_rf_post_BUN.pkl')
         model6 = load_model('tuned_rf_post_BUN_model')
-        
+
         def st_shap(plot):
             shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
             components.html(shap_html)
@@ -433,6 +436,7 @@ def prediction_page():
 
         
             # Adding data for Incremental Learning
+# Move label input outside of the button click block
             label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is outside the button's block
             
             if st.button('Add Data for Learning'):
@@ -468,21 +472,6 @@ def prediction_page():
                         st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
                 except Exception as e:
                     st.error(f"Error during model update: {e}")
-
-            if st.button('Reset to Initial Model'):
-                # Reset everything and load the initial model directly
-                st.session_state['new_data'] = pd.DataFrame()  # 清空增量学习的数据
-                current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # 直接加载初始模型
-                st.session_state['current_model'] = current_model  # 将初始模型存储到 session state
-                st.success("Model has been reset to the initial model!")
-            else:
-                # 使用之前加载的模型
-                if 'current_model' in st.session_state:
-                    current_model = st.session_state['current_model']
-                    st.write(f"Using model from session state: {type(current_model)}")  # 打印模型类型，确认是正确的模型
-                else:
-                    current_model = load_global_model()  # 加载初始模型
-                    st.write("Model loaded as no model was found in session state.")  # 输出模型加载信息
 
             
         elif prediction_type == "Preoperative_batch":
@@ -1058,3 +1047,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
