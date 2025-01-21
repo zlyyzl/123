@@ -53,7 +53,6 @@ class DynamicWeightedForest:
         for tree, weight in zip(self.trees, self.tree_weights):
             explainer = shap.TreeExplainer(tree)
             shap_values_tree = explainer.shap_values(X)[1]  # Get the SHAP values for the positive class
-            print(f"Tree {i} SHAP values: {shap_values_tree}")
             expected_value_tree = explainer.expected_value[1]
             shap_values_sum += weight * shap_values_tree
             expected_value_sum += weight * expected_value_tree
