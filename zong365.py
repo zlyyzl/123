@@ -126,6 +126,59 @@ def update_incremental_learning_model(current_model, new_data):
     else:
         print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
 
+def get_db_connection():
+    conn = sqlite3.connect('users.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def initialize_database():
+    conn = get_db_connection()
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def register_user(username, password):
+    conn = get_db_connection()
+    try:
+        conn.execute("INSERT INTO users (username, password) VALUES (?, ?)",
+                     (username, hash_password(password)))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
+
+def validate_user(username, password):
+    conn = get_db_connection()
+    user = conn.execute("SELECT * FROM users WHERE username = ? AND password = ?",
+                        (username, hash_password(password))).fetchone()
+    conn.close()
+    return user is not None
+
+def login_page():
+    st.title("User Login")
+    
+    with st.form("login_form"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login")
+
+        if submitted:
+            if validate_user(username, password):
+                st.session_state['is_logged_in'] = True
+                st.success("Login successful!")
+                st.experimental_rerun()
+            else:
+                st.error("Invalid username or password.")
 
 # Streamlit page for prediction
 def prediction_page():
