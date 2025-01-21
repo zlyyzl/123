@@ -343,31 +343,31 @@ def prediction_page():
                 st.success("Model has been reset to the initial model!")
 
             def update_incremental_learning_model(current_model, new_data):
-            if len(new_data) >= 10:
-                X = new_data.drop(columns=['label'])
-                y = new_data['label']
-                
-                # Create a new DecisionTreeClassifier without deprecated parameters
-                new_tree = DecisionTreeClassifier(
-                    criterion='entropy',
-                    max_depth=2,
-                    max_features='auto',
-                    min_impurity_decrease=1e-8,  # New parameter instead of min_impurity_split
-                    min_samples_leaf=6,
-                    min_samples_split=3
-                )
-                
-                new_tree.fit(X, y)
-                
-                # Add the new tree to the model
-                current_model.add_tree(new_tree)
-                current_model.update_weights(X, y)
-                
-                # Optionally, save the updated model
-                current_model.save_model('global_weighted_forest.pkl')
-                st.write("Model updated successfully with incremental learning.")
-            else:
-                st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+                if len(new_data) >= 10:
+                    X = new_data.drop(columns=['label'])
+                    y = new_data['label']
+                    
+                    # Create a new DecisionTreeClassifier without deprecated parameters
+                    new_tree = DecisionTreeClassifier(
+                        criterion='entropy',
+                        max_depth=2,
+                        max_features='auto',
+                        min_impurity_decrease=1e-8,  # New parameter instead of min_impurity_split
+                        min_samples_leaf=6,
+                        min_samples_split=3
+                    )
+                    
+                    new_tree.fit(X, y)
+                    
+                    # Add the new tree to the model
+                    current_model.add_tree(new_tree)
+                    current_model.update_weights(X, y)
+                    
+                    # Optionally, save the updated model
+                    current_model.save_model('global_weighted_forest.pkl')
+                    st.write("Model updated successfully with incremental learning.")
+                else:
+                    st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
 
 
             
