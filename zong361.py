@@ -361,48 +361,56 @@ def prediction_page():
             if st.button('Predict'):
                 try:
                     input_array = input_df.values.reshape(1, -1)
-        
+            
                     if isinstance(current_model, RandomForestClassifier):
                         output = current_model.predict_proba(input_array)
-        
+            
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
                             output = np.hstack([1 - output, output])
-        
+            
                         probability = output[:, 1]
-        
+            
                         explainer = shap.TreeExplainer(current_model)
                         shap_values = explainer.shap_values(input_array)
                         expected_value = explainer.expected_value[1]
-        
+            
                     elif isinstance(current_model, DynamicWeightedForest):
                         output = current_model.predict_proba(input_array)
-        
+            
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
                             output = np.hstack([1 - output, output])
-        
+            
                         probability = output[:, 1]
-        
+            
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
-        
+            
                     st.write(f'Predicted probability of good functional outcome: {probability[0]:.4f}')
-                    # Check the shape of shap_values and expected_value
-                    if isinstance(shap_values, list):
-                        shap_values = shap_values[0]  # Use index 0 for the positive class
-                        expected_value = expected_value[0]  # Adjust the expected value if necessary
-                    
-                    st_shap(shap.force_plot(expected_value, shap_values, input_array))
+            
+                    # Debugging: Check the shape and content of shap_values and expected_value
                     print(f"SHAP values: {shap_values}")
                     print(f"Expected value: {expected_value}")
-        
-                    shap_values_flat = shap_values.flatten()
-                    shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
+            
+                    # Check if shap_values is a list, then access the proper index
+                    if isinstance(shap_values, list):
+                        shap_values = shap_values[1]  # Use index 1 for the positive class (if it's a binary classification)
+            
+                    # If shap_values is not a list, ensure it's a valid 1D array for plotting
+                    if isinstance(shap_values, np.ndarray):
+                        shap_values = shap_values.flatten()
+            
+                    # Visualize SHAP values
+                    st_shap(shap.force_plot(expected_value, shap_values, input_array))
+            
+                    # Create DataFrame for SHAP values
+                    shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values})
                     st.write("SHAP values for each feature:")
                     st.dataframe(shap_df)
-        
+            
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
+
         
             # Adding data for Incremental Learning
             if st.button('Add Data for Learning'):
