@@ -387,10 +387,14 @@ def prediction_page():
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
         
                     st.write(f'Predicted probability of good functional outcome: {probability[0]:.4f}')
+                    # Check the shape of shap_values and expected_value
                     if isinstance(shap_values, list):
-                        shap_values = shap_values[1]
-        
+                        shap_values = shap_values[0]  # Use index 0 for the positive class
+                        expected_value = expected_value[0]  # Adjust the expected value if necessary
+                    
                     st_shap(shap.force_plot(expected_value, shap_values, input_array))
+                    print(f"SHAP values: {shap_values}")
+                    print(f"Expected value: {expected_value}")
         
                     shap_values_flat = shap_values.flatten()
                     shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
