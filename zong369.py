@@ -91,44 +91,7 @@ self, X):
             st.error(f"Model file {model_name} not found.")
             return None
 
-def load_global_model():
-    model_file = 'global_weighted_forest.pkl'  # 术前模型
-    st.write(f"Attempting to load global model: {model_file}")
-    try:
-        if os.path.exists(model_file):
-            try:
-                model = DynamicWeightedForest.load_model(model_file)
-                st.write(f"Model loaded successfully: {model_file}")
-                return model
-            except EOFError:
-                st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
-                os.remove(model_file)
-        else:
-            st.warning(f"Model file not found: {model_file}. Creating a new model.")
-        
-        # 加载初始模型
-        initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
-        st.write("Initialized a new model from base trees.")
-        return DynamicWeightedForest(initial_model.estimators_)
-    except Exception as e:
-        st.error(f"Failed to load or create global model: {e}")
-        return None
 
-def update_incremental_learning_model(current_model, new_data):
-    # Ensure we have at least 10 samples before applying incremental learning
-    if len(new_data) >= 10:
-        # Perform incremental learning here
-        X = new_data.drop(columns=['label'])
-        y = new_data['label']
-
-        # For example, retrain or update model
-        current_model.fit(X, y)
-
-        # Optionally, save the updated model
-        current_model.save_model('global_weighted_forest.pkl')
-        print("Model updated successfully with incremental learning.")
-    else:
-        print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
 
 def load_global_model2():
     model_file = 'global_weighted_forest2.pkl'  # 术中模型
@@ -355,6 +318,45 @@ def prediction_page():
         if prediction_type == "Preoperative_number":
             st.subheader("Preoperative Number Prediction")
             st.write("Please fill in the blanks with corresponding data.")
+
+            def load_global_model():
+                model_file = 'global_weighted_forest.pkl'  # 术前模型
+                st.write(f"Attempting to load global model: {model_file}")
+                try:
+                    if os.path.exists(model_file):
+                        try:
+                            model = DynamicWeightedForest.load_model(model_file)
+                            st.write(f"Model loaded successfully: {model_file}")
+                            return model
+                        except EOFError:
+                            st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
+                            os.remove(model_file)
+                    else:
+                        st.warning(f"Model file not found: {model_file}. Creating a new model.")
+                    
+                    # 加载初始模型
+                    initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
+                    st.write("Initialized a new model from base trees.")
+                    return DynamicWeightedForest(initial_model.estimators_)
+                except Exception as e:
+                    st.error(f"Failed to load or create global model: {e}")
+                    return None
+            
+            def update_incremental_learning_model(current_model, new_data):
+                # Ensure we have at least 10 samples before applying incremental learning
+                if len(new_data) >= 10:
+                    # Perform incremental learning here
+                    X = new_data.drop(columns=['label'])
+                    y = new_data['label']
+            
+                    # For example, retrain or update model
+                    current_model.fit(X, y)
+            
+                    # Optionally, save the updated model
+                    current_model.save_model('global_weighted_forest.pkl')
+                    print("Model updated successfully with incremental learning.")
+                else:
+                    print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
             
             NIHSS = st.number_input('NIHSS', min_value = 4, max_value = 38, value = 10) 
             GCS = st.number_input('GCS', min_value = 0, max_value = 15 , value = 10) 
