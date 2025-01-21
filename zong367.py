@@ -417,7 +417,7 @@ def prediction_page():
                         shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
             
                     # Display the predicted probabilities
-                    st.write(f"Predicted probabilities: {probability}")
+                    st.write(' Based on feature values, predicted possibility of good functional outcome is '+ str(probability))
             
                     st_shap(shap.force_plot(expected_value, shap_values, input_array))
             
