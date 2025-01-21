@@ -400,35 +400,44 @@ def prediction_page():
                     # For DynamicWeightedForest
                     if isinstance(current_model, DynamicWeightedForest):
                         output = current_model.predict_proba(input_array)
-                        
+                    
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
                             output = np.hstack([1 - output, output])
-                        
+                    
                         probability = output[:, 1]
-                        
+                    
                         # SHAP for DynamicWeightedForest
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
-                        
-                        # Visualize SHAP values using force plot
-                        shap_plot = shap.force_plot(expected_value, shap_values, input_array)
-                        st_shap(shap_plot)  # Display the SHAP force plot
                     
-                    # Displaying predicted probabilities
-                    st.write(f"Predicted probabilities: {probability}")
+                        # Debugging: Check if shap_values and expected_value are valid
+                        if shap_values is None or expected_value is None:
+                            st.error("SHAP values or expected value is None!")
+                        else:
+                            st.write(f"Incremental learning model output: {output}")
+                            st.write(f"SHAP values: {shap_values}")
+                            st.write(f"Expected value: {expected_value}")
                     
-                    # Ensure shap_values is 1D for visualization
-                    if isinstance(shap_values, list):
-                        shap_values = shap_values[1]  # Use the SHAP values for the positive class (index 1)
-                    elif isinstance(shap_values, np.ndarray):
-                        shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
+                            # Visualize SHAP values using force plot
+                            try:
+                                shap_plot = shap.force_plot(expected_value, shap_values, input_array)
+                                st_shap(shap_plot)  # Display the SHAP force plot
+                            except Exception as e:
+                                st.error(f"Error rendering SHAP force plot: {e}")
                     
-                    st.write(f"Flattened SHAP values: {shap_values}")
+                        # Ensure shap_values is 1D for visualization
+                        if isinstance(shap_values, list):
+                            shap_values = shap_values[1]  # Use the SHAP values for the positive class (index 1)
+                        elif isinstance(shap_values, np.ndarray):
+                            shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
                     
-                    shap_values_flat = shap_values.flatten()
-                    shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
-                    st.write("SHAP values for each feature:")
-                    st.dataframe(shap_df)
+                        st.write(f"Flattened SHAP values: {shap_values}")
+                    
+                        shap_values_flat = shap_values.flatten()
+                        shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
+                        st.write("SHAP values for each feature:")
+                        st.dataframe(shap_df)
+
             
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
