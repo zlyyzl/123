@@ -447,34 +447,37 @@ def prediction_page():
             if st.button('Add Data for Learning'):
                 try:
                     label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is inside the button's block
-        
+            
                     # Add label to the input data
                     new_data = input_df.copy()
                     new_data['label'] = label
                     st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
-        
+            
                     accumulated_data = st.session_state['new_data']
                     X = accumulated_data.drop(columns=['label'])
                     y = accumulated_data['label'].astype(int)
-        
+            
                     st.write("Accumulated training data preview:")
                     st.dataframe(accumulated_data)
                     st.write(f"Features shape: {X.shape}, Labels shape: {y.shape}")
                     st.write(f"Unique labels in training data: {y.unique()}")
-        
-                    if isinstance(current_model, RandomForestClassifier):
-                        current_model.fit(X, y)
-                        joblib.dump(current_model, 'tuned_rf_pre_BUN.pkl')  # Save the updated model
-                        st.success("RandomForestClassifier model updated successfully!")
-        
-                    elif isinstance(current_model, DynamicWeightedForest):
-                        new_tree = DecisionTreeClassifier(random_state=42)
-                        new_tree.fit(X, y)
-                        current_model.add_tree(new_tree)
-                        current_model.update_weights(X, y)
-                        current_model.save_model('global_weighted_forest.pkl')  # Save the updated DWF model
-                        st.success("DynamicWeightedForest model updated successfully!")
-        
+            
+                    # Check if there are at least 10 samples before updating the model
+                    if len(accumulated_data) >= 10:
+                        if isinstance(current_model, RandomForestClassifier):
+                            current_model.fit(X, y)
+                            joblib.dump(current_model, 'tuned_rf_pre_BUN.pkl')  # Save the updated model
+                            st.success("RandomForestClassifier model updated successfully!")
+                        elif isinstance(current_model, DynamicWeightedForest):
+                            new_tree = DecisionTreeClassifier(random_state=42)
+                            new_tree.fit(X, y)
+                            current_model.add_tree(new_tree)
+                            current_model.update_weights(X, y)
+                            current_model.save_model('global_weighted_forest.pkl')  # Save the updated DWF model
+                            st.success("DynamicWeightedForest model updated successfully!")
+                    else:
+                        st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+            
                 except Exception as e:
                     st.error(f"Error during model update: {e}")
 
