@@ -71,6 +71,11 @@ self, X):
         print(f"Updated tree weights: {self.tree_weights}") 
 
     def add_tree(self, new_tree):
+        # Ensure no deprecated parameters like min_impurity_split are passed
+        valid_params = {key: value for key, value in new_tree.get_params().items() if key != "min_impurity_split"}
+        new_tree.set_params(**valid_params)
+    
+        # Add the tree to the model
         self.trees.append(new_tree)
         self.tree_weights = np.append(self.tree_weights, [1.0])
         self.tree_weights /= np.sum(self.tree_weights)
@@ -338,8 +343,22 @@ def prediction_page():
                     X = new_data.drop(columns=['label'])
                     y = new_data['label']
             
-                    # For example, retrain or update model
-                    current_model.fit(X, y)
+                    # Create a new DecisionTreeClassifier without deprecated parameters
+                    new_tree = DecisionTreeClassifier(
+                        criterion='entropy',
+                        max_depth=2,
+                        max_features='auto',  # Adjust this to your preference
+                        min_impurity_decrease=1e-8,  # Adjusted value for clarity
+                        min_samples_leaf=6,
+                        min_samples_split=3
+                    )
+            
+                    # Fit the new tree with the data
+                    new_tree.fit(X, y)
+            
+                    # Add the tree to the model
+                    current_model.add_tree(new_tree)
+                    current_model.update_weights(X, y)
             
                     # Optionally, save the updated model
                     current_model.save_model('global_weighted_forest.pkl')
