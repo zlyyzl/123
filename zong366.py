@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import base64
@@ -91,35 +90,6 @@ self, X):
         else:
             st.error(f"Model file {model_name} not found.")
             return None
-st.set_page_config(page_title="My Application", layout="centered")
-def reset_model():
-    # 直接加载初始模型
-    current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # 直接加载初始模型
-    st.session_state['current_model'] = current_model  # 将初始模型存储到 session state
-    st.session_state['new_data'] = pd.DataFrame()  # 清空增量学习的数据
-    st.write(f"Model reset to initial model: {type(current_model)}")
-    return current_model
-
-def load_global_model():
-    model_file = 'global_weighted_forest.pkl'
-    st.write(f"Attempting to load global model: {model_file}")
-    try:
-        if os.path.exists(model_file):
-            model = DynamicWeightedForest.load_model(model_file)
-            st.write(f"Model loaded successfully: {model_file}")
-            return model
-        else:
-            st.warning(f"Model file not found: {model_file}. Creating a new model from base trees.")
-            initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
-            return DynamicWeightedForest(initial_model.estimators_)
-    except Exception as e:
-        st.error(f"Failed to load or create global model: {e}")
-        return None
-
-# 调用重置模型的代码
-if st.button('Reset to Initial Model'):
-    current_model = reset_model()
-    st.success("Model has been reset to the initial model!")
 
 
 def update_incremental_learning_model(current_model, new_data):
@@ -363,6 +333,36 @@ def prediction_page():
         if prediction_type == "Preoperative_number":
             st.subheader("Preoperative Number Prediction")
             st.write("Please fill in the blanks with corresponding data.")
+
+            def reset_model():
+                # 直接加载初始模型
+                current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # 直接加载初始模型
+                st.session_state['current_model'] = current_model  # 将初始模型存储到 session state
+                st.session_state['new_data'] = pd.DataFrame()  # 清空增量学习的数据
+                st.write(f"Model reset to initial model: {type(current_model)}")
+                return current_model
+            
+            def load_global_model():
+                model_file = 'global_weighted_forest.pkl'
+                st.write(f"Attempting to load global model: {model_file}")
+                try:
+                    if os.path.exists(model_file):
+                        model = DynamicWeightedForest.load_model(model_file)
+                        st.write(f"Model loaded successfully: {model_file}")
+                        return model
+                    else:
+                        st.warning(f"Model file not found: {model_file}. Creating a new model from base trees.")
+                        initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
+                        return DynamicWeightedForest(initial_model.estimators_)
+                except Exception as e:
+                    st.error(f"Failed to load or create global model: {e}")
+                    return None
+            
+            # 调用重置模型的代码
+            if st.button('Reset to Initial Model'):
+                current_model = reset_model()
+                st.success("Model has been reset to the initial model!")
+
             
             NIHSS = st.number_input('NIHSS', min_value = 4, max_value = 38, value = 10) 
             GCS = st.number_input('GCS', min_value = 0, max_value = 15 , value = 10) 
