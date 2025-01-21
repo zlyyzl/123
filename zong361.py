@@ -388,23 +388,21 @@ def prediction_page():
             
                     st.write(f'Predicted probability of good functional outcome: {probability[0]:.4f}')
             
-                    # Debugging: Check the shape and content of shap_values and expected_value
+                    # Check the shape of shap_values and expected_value
                     print(f"SHAP values: {shap_values}")
                     print(f"Expected value: {expected_value}")
             
-                    # Check if shap_values is a list, then access the proper index
+                    # Ensure shap_values is 1D for visualization and SHAP analysis
                     if isinstance(shap_values, list):
                         shap_values = shap_values[1]  # Use index 1 for the positive class (if it's a binary classification)
+                    elif isinstance(shap_values, np.ndarray):
+                        shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
             
-                    # If shap_values is not a list, ensure it's a valid 1D array for plotting
-                    if isinstance(shap_values, np.ndarray):
-                        shap_values = shap_values.flatten()
-            
-                    # Visualize SHAP values
+                    # Visualize SHAP values using force plot
                     st_shap(shap.force_plot(expected_value, shap_values, input_array))
             
-                    # Create DataFrame for SHAP values
-                    shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values})
+                    shap_values_flat = shap_values.flatten()
+                    shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
                     st.write("SHAP values for each feature:")
                     st.dataframe(shap_df)
             
