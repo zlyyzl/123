@@ -37,6 +37,7 @@ class DynamicWeightedForest:
             proba = tree.predict_proba(X)
             
             print(f"Tree {i} proba shape: {proba.shape}")
+            print(f"Tree {i} proba: {proba}") 
         
             if proba.shape[1] == 1:
                 proba = np.hstack([1 - proba, proba])  # Add missing class probability
@@ -52,6 +53,7 @@ class DynamicWeightedForest:
         for tree, weight in zip(self.trees, self.tree_weights):
             explainer = shap.TreeExplainer(tree)
             shap_values_tree = explainer.shap_values(X)[1]  # Get the SHAP values for the positive class
+            print(f"Tree {i} SHAP values: {shap_values_tree}")
             expected_value_tree = explainer.expected_value[1]
             shap_values_sum += weight * shap_values_tree
             expected_value_sum += weight * expected_value_tree
@@ -66,6 +68,7 @@ class DynamicWeightedForest:
             accuracy = np.mean(predictions == y)
             self.tree_weights[i] = accuracy
         self.tree_weights /= np.sum(self.tree_weights)
+        print(f"Updated tree weights: {self.tree_weights}") 
 
     def add_tree(self, new_tree):
         self.trees.append(new_tree)
