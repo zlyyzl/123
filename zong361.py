@@ -51,11 +51,14 @@ class DynamicWeightedForest:
         expected_value_sum = 0
         for tree, weight in zip(self.trees, self.tree_weights):
             explainer = shap.TreeExplainer(tree)
-            shap_values_tree = explainer.shap_values(X)[1]  
+            shap_values_tree = explainer.shap_values(X)[1]  # Get the SHAP values for the positive class
             expected_value_tree = explainer.expected_value[1]
             shap_values_sum += weight * shap_values_tree
             expected_value_sum += weight * expected_value_tree
+        print(f"Final SHAP values sum: {shap_values_sum}")
+        print(f"Final expected value sum: {expected_value_sum}")
         return shap_values_sum, expected_value_sum
+
 
     def update_weights(self, X, y):
         for i, tree in enumerate(self.trees):
@@ -378,36 +381,49 @@ def prediction_page():
                         expected_value = explainer.expected_value[1]
             
                     # For DynamicWeightedForest
-                    elif isinstance(current_model, DynamicWeightedForest):
-                        output = current_model.predict_proba(input_array)
+            if isinstance(current_model, DynamicWeightedForest):
+                # Check if there are any trees in the model
+                if len(current_model.trees) == 0:
+                    st.warning("No trees found in the DynamicWeightedForest model!")
+                
+                output = current_model.predict_proba(input_array)
+                
+                # Ensure the output has the expected shape and is valid
+                if output.shape[1] == 1:
+                    st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
+                    output = np.hstack([1 - output, output])
             
-                        if output.shape[1] == 1:
-                            st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
-                            output = np.hstack([1 - output, output])
+                probability = output[:, 1]
             
-                        probability = output[:, 1]
+                # SHAP for DynamicWeightedForest
+                shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
+                
+                # Debugging: Check the SHAP values after the update
+                print(f"SHAP values: {shap_values}")
+                print(f"Expected value: {expected_value}")
             
-                        # SHAP for DynamicWeightedForest
-                        shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
+                if shap_values is None:
+                    st.warning("No SHAP values returned!")
+                else:
+                    # Visualize SHAP values using force plot
+                    st_shap(shap.force_plot(expected_value, shap_values, input_array))
             
-                        # Ensure shap_values is a 2D array with shape (1, num_features)
-                        if isinstance(shap_values, list):
-                            shap_values = shap_values[1]  # Use the SHAP values for the positive class (index 1)
-                            expected_value = expected_value[1]  # Adjust expected_value if necessary
-                        
-                        elif isinstance(shap_values, np.ndarray):
-                            shap_values = shap_values.flatten()
+                # Ensure shap_values is 1D for visualization
+                if isinstance(shap_values, list):
+                    shap_values = shap_values[1]  # Use the SHAP values for the positive class (index 1)
+                elif isinstance(shap_values, np.ndarray):
+                    shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
             
-                        st.write(f"Flattened SHAP values: {shap_values}")
+                st.write(f"Flattened SHAP values: {shap_values}")
             
-                        # Visualize SHAP values using force plot
-                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
+                # Visualize SHAP values using force plot
+                st_shap(shap.force_plot(expected_value, shap_values, input_array))
             
-                        shap_values_flat = shap_values.flatten()  # Flatten SHAP values for DataFrame creation
-                        shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
-                        st.write("SHAP values for each feature:")
-                        st.dataframe(shap_df)
-            
+                shap_values_flat = shap_values.flatten()  # Flatten SHAP values for DataFrame creation
+                shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
+                st.write("SHAP values for each feature:")
+                st.dataframe(shap_df)
+
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
 
