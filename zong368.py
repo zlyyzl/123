@@ -349,14 +349,29 @@ def prediction_page():
                     X = new_data.drop(columns=['label'])
                     y = new_data['label']
             
-                    # For example, retrain or update model
-                    current_model.fit(X, y)
+                    # Create a new DecisionTreeClassifier without deprecated parameters
+                    new_tree = DecisionTreeClassifier(
+                        criterion='entropy',
+                        max_depth=2,
+                        max_features='auto',  # Adjust this to your preference
+                        min_impurity_decrease=1e-8,  # Adjusted value for clarity
+                        min_samples_leaf=6,
+                        min_samples_split=3
+                    )
+            
+                    # Fit the new tree with the data
+                    new_tree.fit(X, y)
+            
+                    # Add the tree to the model
+                    current_model.add_tree(new_tree)
+                    current_model.update_weights(X, y)
             
                     # Optionally, save the updated model
                     current_model.save_model('global_weighted_forest.pkl')
                     st.write("Model updated successfully with incremental learning.")
                 else:
                     st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+
 
             
             NIHSS = st.number_input('NIHSS', min_value = 4, max_value = 38, value = 10) 
