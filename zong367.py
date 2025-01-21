@@ -410,17 +410,21 @@ def prediction_page():
                         # SHAP for DynamicWeightedForest
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
                     
-                        # Debugging: Check if shap_values and expected_value are valid
+                        # Debugging: Print out the shap_values and expected_value
+                        st.write(f"SHAP values: {shap_values}")
+                        st.write(f"Expected value: {expected_value}")
+                    
+                        # Check if shap_values is valid and of the correct shape
                         if shap_values is None or expected_value is None:
                             st.error("SHAP values or expected value is None!")
                         else:
-                            st.write(f"Incremental learning model output: {output}")
-                            st.write(f"SHAP values: {shap_values}")
-                            st.write(f"Expected value: {expected_value}")
-                    
                             # Visualize SHAP values using force plot
                             try:
                                 shap_plot = shap.force_plot(expected_value, shap_values, input_array)
+                    
+                                # Check if the shap_plot has valid HTML content
+                                st.write(f"SHAP force plot HTML content: {shap_plot.html()[:500]}")  # Print part of the HTML to debug
+                    
                                 st_shap(shap_plot)  # Display the SHAP force plot
                             except Exception as e:
                                 st.error(f"Error rendering SHAP force plot: {e}")
