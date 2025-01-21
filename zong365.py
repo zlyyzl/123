@@ -338,22 +338,33 @@ def prediction_page():
             print(f"Model after reset: {type(current_model)}")
             st.success("Model has been reset to the initial model!")
             
-            # Ensure input_df is reinitialized when resetting the model
-            input_df = pd.DataFrame(columns=['NIHSS', 'GCS', 'pre_eGFR', 'pre_glucose', 'PC_ASPECTS', 'Age', 'pre_BUN'])
+            # Ensure input_df is reinitialized with default values
+            input_df = pd.DataFrame({
+                'NIHSS': [10], 
+                'GCS': [10], 
+                'pre_eGFR': [111.5],
+                'pre_glucose': [7.78], 
+                'PC_ASPECTS': [8.0], 
+                'Age': [60], 
+                'pre_BUN': [10.20]
+            })
+            st.write("Input data initialized for prediction.")
         else:
             # 使用之前加载的模型
             if 'current_model' in st.session_state:
                 current_model = st.session_state['current_model']
                 st.write(f"Using model from session state: {type(current_model)}")  # 打印模型类型，确认是正确的模型
                 
-                # Check if input_df is available
-                if 'input_df' in locals() and input_df is not None:
+                # Proceed with prediction if input_df is not None
+                if input_df is not None and not input_df.empty:
                     output = current_model.predict(input_df)  # Check if input_df is properly defined
+                    st.write(f"Prediction output: {output}")
                 else:
                     st.warning("No input data provided for prediction.")
             else:
                 current_model = load_global_model()  # 加载初始模型
                 st.write("Model loaded as no model was found in session state.")  # 输出模型加载信息
+
 
 
         def st_shap(plot):
