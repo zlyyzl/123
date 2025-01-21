@@ -444,10 +444,11 @@ def prediction_page():
 
         
             # Adding data for Incremental Learning
+# Move label input outside of the button click block
+            label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is outside the button's block
+            
             if st.button('Add Data for Learning'):
                 try:
-                    label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is inside the button's block
-            
                     # Add label to the input data
                     new_data = input_df.copy()
                     new_data['label'] = label
@@ -477,7 +478,6 @@ def prediction_page():
                             st.success("DynamicWeightedForest model updated successfully!")
                     else:
                         st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
-            
                 except Exception as e:
                     st.error(f"Error during model update: {e}")
 
