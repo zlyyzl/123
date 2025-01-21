@@ -370,6 +370,11 @@ def prediction_page():
             if 'new_data' not in st.session_state:
                 st.session_state['new_data'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
             
+            if 'current_model' not in st.session_state:
+                st.session_state['current_model'] = joblib.load('tuned_rf_pre_BUN.pkl')  # or call load_global_model()
+            
+            # Access the model from session state
+            current_model = st.session_state['current_model']  
             
             # Prediction logic after checking that current_model exists
             if st.button('Predict'):
