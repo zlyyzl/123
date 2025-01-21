@@ -410,9 +410,6 @@ def prediction_page():
                         # SHAP for DynamicWeightedForest
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
             
-                        # Visualize SHAP values using force plot
-                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
-            
                     # Ensure shap_values is 1D for visualization
                     if isinstance(shap_values, list):
                         shap_values = shap_values[1]  # Use the SHAP values for the positive class (index 1)
