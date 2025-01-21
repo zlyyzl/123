@@ -30,7 +30,8 @@ class DynamicWeightedForest:
         self.trees = base_trees
         self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
 
-    def predict_proba(self, X):
+    def predict_proba(
+self, X):
         weighted_votes = np.zeros((X.shape[0], 2))  # Ensure the output is always (n_samples, 2)
         
         for i, tree in enumerate(self.trees):
