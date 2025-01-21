@@ -92,7 +92,7 @@ self, X):
             return None
 
 def load_global_model():
-    model_file = 'global_weighted_forest.pkl'  # 术前模型
+    model_file = 'global_weighted_forest.pkl' 
     st.write(f"Attempting to load global model: {model_file}")
     try:
         if os.path.exists(model_file):
@@ -106,7 +106,6 @@ def load_global_model():
         else:
             st.warning(f"Model file not found: {model_file}. Creating a new model.")
         
-        # 加载初始模型
         initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
         st.write("Initialized a new model from base trees.")
         return DynamicWeightedForest(initial_model.estimators_)
@@ -131,7 +130,7 @@ def update_incremental_learning_model(current_model, new_data):
         print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
 
 def load_global_model2():
-    model_file = 'global_weighted_forest2.pkl'  # 术中模型
+    model_file = 'global_weighted_forest2.pkl'  
     st.write(f"Attempting to load global model: {model_file}")
     try:
         if os.path.exists(model_file):
@@ -145,7 +144,6 @@ def load_global_model2():
         else:
             st.warning(f"Model file not found: {model_file}. Creating a new model.")
         
-        # 加载术中初始模型
         initial_model = joblib.load('tuned_rf_intra_BUN.pkl')
         st.write("Initialized a new model from base trees.")
         return DynamicWeightedForest(initial_model.estimators_)
@@ -331,6 +329,7 @@ def prediction_page():
             st.session_state['new_data'] = pd.DataFrame()  # 清空增量学习的数据
             current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # 直接加载初始模型
             st.session_state['current_model'] = current_model  # 将初始模型存储到 session state
+            print(f"Model after reset: {type(current_model)}")
             st.success("Model has been reset to the initial model!")
         else:
             # 使用之前加载的模型
