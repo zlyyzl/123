@@ -420,7 +420,7 @@ def prediction_page():
                         shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
             
                     st.write(f"Flattened SHAP values: {shap_values}")
-            
+                    st_shap(shap.force_plot(expected_value, shap_values, input_array))
                     shap_values_flat = shap_values.flatten()
                     shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
                     st.write("SHAP values for each feature:")
