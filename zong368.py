@@ -74,14 +74,15 @@ self, X):
         # Ensure no deprecated parameters like min_impurity_split are passed
         valid_params = {key: value for key, value in new_tree.get_params().items() if key != "min_impurity_split"}
         new_tree.set_params(**valid_params)
-    
+        
         # Add the tree to the model
         self.trees.append(new_tree)
         self.tree_weights = np.append(self.tree_weights, [1.0])
         self.tree_weights /= np.sum(self.tree_weights)
-    
+        
         # Debugging: Check the shape after adding a new tree
         print(f"After adding new tree, number of trees: {len(self.trees)}")
+
 
     def save_model(self, model_name):
         st.write(f"Saving model to {model_name}")  
