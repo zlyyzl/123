@@ -27,20 +27,18 @@ tree = DecisionTreeClassifier()
 print(tree.get_params())
 
 
-class DynamicWeightedForest:
-    def __call__(self, X):
-        return self.predict_proba(X)
 
+class DynamicWeightedForest:
     def __init__(self, base_trees):
         self.trees = base_trees
-        self.tree_weights = np.ones(len(self.trees)) / len(self.trees)
+        self.tree_weights = np.ones(len(self.trees)) / len(self.trees)  
 
     def predict_proba(self, X):
-        weighted_votes = np.zeros((X.shape[0], 2))  # Ensure the output is always (n_samples, 2)
+        weighted_votes = np.zeros((X.shape[0], 2))  
         for i, tree in enumerate(self.trees):
             proba = tree.predict_proba(X)
             if proba.shape[1] == 1:
-                proba = np.hstack([1 - proba, proba])  # Add missing class probability
+                proba = np.hstack([1 - proba, proba])  
             weighted_votes += self.tree_weights[i] * proba
         return weighted_votes / np.sum(self.tree_weights)
 
@@ -49,14 +47,13 @@ class DynamicWeightedForest:
         expected_value_sum = 0
         for tree, weight in zip(self.trees, self.tree_weights):
             explainer = shap.TreeExplainer(tree)
-            shap_values_tree = explainer.shap_values(X)[1]  # Get the SHAP values for the positive class
+            shap_values_tree = explainer.shap_values(X)[1]  
             expected_value_tree = explainer.expected_value[1]
             shap_values_sum += weight * shap_values_tree
             expected_value_sum += weight * expected_value_tree
         return shap_values_sum, expected_value_sum
 
     def update_weights(self, X, y):
-        # Update the weights based on tree performance
         for i, tree in enumerate(self.trees):
             predictions = tree.predict(X)
             accuracy = np.mean(predictions == y)
@@ -64,7 +61,11 @@ class DynamicWeightedForest:
         self.tree_weights /= np.sum(self.tree_weights)
 
     def add_tree(self, new_tree):
-        # Add new tree to the model
+        # Explicitly set only valid parameters, removing outdated ones
+        valid_params = {key: value for key, value in new_tree.get_params().items() if key != "min_impurity_split"}
+        new_tree.set_params(**valid_params)
+        
+        # Add new tree
         self.trees.append(new_tree)
         self.tree_weights = np.append(self.tree_weights, [1.0])
         self.tree_weights /= np.sum(self.tree_weights)
@@ -319,6 +320,7 @@ def prediction_page():
                 st.success("Model has been reset to the initial model!")
 
             # Incremental Learning Function
+
             def update_incremental_learning_model(current_model, new_data):
                 if len(new_data) >= 10:
                     X = new_data.drop(columns=['label'])
@@ -328,15 +330,15 @@ def prediction_page():
                     new_tree = DecisionTreeClassifier(
                         criterion='entropy',
                         max_depth=2,
-                        max_features='auto',  # Use auto for random features selection
-                        min_impurity_decrease=1e-8,  # Updated parameter for clarity
+                        max_features='auto',  
+                        min_impurity_decrease=1e-8,  
                         min_samples_leaf=6,
                         min_samples_split=3
                     )
             
                     new_tree.fit(X, y)
             
-                    # Add the newly created tree to the model and update the weights
+                    # Add the new tree to the model
                     current_model.add_tree(new_tree)
                     current_model.update_weights(X, y)
             
@@ -345,7 +347,6 @@ def prediction_page():
                     print("Model updated successfully with incremental learning.")
                 else:
                     print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
-
 
             
             NIHSS = st.number_input('NIHSS', min_value = 4, max_value = 38, value = 10) 
