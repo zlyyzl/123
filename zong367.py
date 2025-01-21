@@ -381,36 +381,35 @@ def prediction_page():
             if st.button('Predict'):
                 try:
                     input_array = input_df.values.reshape(1, -1)
-            
+                    
                     # For RandomForestClassifier
-    # For RandomForestClassifier
                     if isinstance(current_model, RandomForestClassifier):
                         output = current_model.predict_proba(input_array)
-                    
+                        
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
                             output = np.hstack([1 - output, output])
-                    
+                        
                         probability = output[:, 1]
-                    
+                        
                         # SHAP for RandomForestClassifier
                         explainer = shap.TreeExplainer(current_model)
                         shap_values = explainer.shap_values(input_array)
                         expected_value = explainer.expected_value[1]
-                    
+            
                     # For DynamicWeightedForest
                     if isinstance(current_model, DynamicWeightedForest):
                         output = current_model.predict_proba(input_array)
-                    
+                        
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
                             output = np.hstack([1 - output, output])
-                    
+                        
                         probability = output[:, 1]
-                    
+                        
                         # SHAP for DynamicWeightedForest
                         shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
-                    
+                        
                         # Visualize SHAP values using force plot
                         shap_plot = shap.force_plot(expected_value, shap_values, input_array)
                         st_shap(shap_plot)  # Display the SHAP force plot
@@ -430,12 +429,7 @@ def prediction_page():
                     shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
                     st.write("SHAP values for each feature:")
                     st.dataframe(shap_df)
-                    
-                    # Add the missing function st_shap to display the plot properly
-                    def st_shap(plot):
-                        shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
-                        components.html(shap_html, height=600)  # Ensure height is large enough for SHAP plots
-
+            
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
 
