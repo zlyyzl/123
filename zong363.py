@@ -113,6 +113,22 @@ def load_global_model():
         st.error(f"Failed to load or create global model: {e}")
         return None
 
+def update_incremental_learning_model(current_model, new_data):
+    # Ensure we have at least 10 samples before applying incremental learning
+    if len(new_data) >= 10:
+        # Perform incremental learning here
+        X = new_data.drop(columns=['label'])
+        y = new_data['label']
+
+        # For example, retrain or update model
+        current_model.fit(X, y)
+
+        # Optionally, save the updated model
+        current_model.save_model('global_weighted_forest.pkl')
+        print("Model updated successfully with incremental learning.")
+    else:
+        print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+
 def load_global_model2():
     model_file = 'global_weighted_forest2.pkl'  # 术中模型
     st.write(f"Attempting to load global model: {model_file}")
