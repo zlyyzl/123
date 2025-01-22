@@ -755,7 +755,7 @@ def prediction_page():
                         
                         output = current_model_intra.predict_proba(input_array_intra)
                         probability = output[:, 1]
-                        st.write(f'Prediction probability: {probability}')
+                        st.write(f'Based on feature values, predicted possibility of good functional outcome is {probability}')
             
                         # SHAP 解释器
                         shap_values, expected_value = current_model_intra.get_weighted_shap_values(input_array_intra)
@@ -1066,7 +1066,7 @@ def prediction_page():
                         
                         output = current_model_post.predict_proba(input_array_post)
                         probability = output[:, 1]
-                        st.write(f'Prediction probability: {probability}')
+                        st.write(f'Based on feature values, predicted possibility of good functional outcome is {probability}')
             
                         # SHAP 解释器
                         shap_values, expected_value = current_model_post.get_weighted_shap_values(input_array_post)
