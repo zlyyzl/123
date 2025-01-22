@@ -210,7 +210,7 @@ def prediction_page():
             
             """, unsafe_allow_html=True)
 
-        pdf_file_path = r"123.pdf"
+        pdf_file_path = r"User Manual.pdf"
         if os.path.exists(pdf_file_path):
             st.markdown("Click here to download the manual for more detailed usage instructions:")
             with open(pdf_file_path, "rb") as f:
