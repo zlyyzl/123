@@ -921,7 +921,7 @@ def prediction_page():
             def load_global_model_post():
                 model_file_post = 'global_weighted_forest_post.pkl'
                 if debug_mode:
-                    st.write(f"Attempting to load global model: {model_file_intra}")
+                    st.write(f"Attempting to load global model: {model_file_post}")
                 try:
                     if os.path.exists(model_file_post):
                         try:
