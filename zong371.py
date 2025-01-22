@@ -600,7 +600,63 @@ def prediction_page():
         elif prediction_type == "Intraoperative_number":
             st.subheader("Intraoperative Number Prediction")
             st.write("This section will handle intraoperative number predictions.please fill in the blanks with corresponding data. After that,click on the Predict button at the bottom to see the prediction of the classifier.")
+        
+  
+            def load_global_model():
+                model_file = 'global_weighted_forest2.pkl'  # 术前模型
+                st.write(f"Attempting to load global model: {model_file}")
+                try:
+                    if os.path.exists(model_file):
+                        try:
+                            model = DynamicWeightedForest.load_model(model_file)
+                            st.write(f"Model loaded successfully: {model_file}")
+                            return model
+                        except EOFError:
+                            st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
+                            os.remove(model_file)
+                    else:
+                        st.warning(f"Model file not found: {model_file}. Creating a new model.")
+                    
+                    # 加载初始模型
+                    initial_model = joblib.load('tuned_rf_intra_BUN.pkl')
+                    st.write("Initialized a new model from base trees.")
+                    return DynamicWeightedForest(initial_model.estimators_)
+                except Exception as e:
+                    st.error(f"Failed to load or create global model: {e}")
+                    return None
+            
+            def update_incremental_learning_model(current_model, new_data):
+                # Ensure we have at least 10 samples before applying incremental learning
+                if len(new_data) >= 10:
+                    # Perform incremental learning here
+                    X = new_data.drop(columns=['label'])
+                    y = new_data['label']
+            
+                    # For example, retrain or update model
+                    current_model.fit(X, y)
+            
+                    # Optionally, save the updated model
+                    current_model.save_model('global_weighted_forest2.pkl')
+                    print("Model updated successfully with incremental learning.")
+                else:
+                    print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
 
+            if st.button('Reset to Initial Model'):
+                # Reset everything and load the initial model directly
+                st.session_state['new_data'] = pd.DataFrame()  # 清空增量学习的数据
+                current_model = joblib.load('tuned_rf_intra_BUN.pkl')  # 直接加载初始模型
+                st.session_state['current_model'] = current_model  # 将初始模型存储到 session state
+                st.success("Model has been reset to the initial model!")
+            else:
+                # 使用之前加载的模型
+                if 'current_model' in st.session_state:
+                    current_model = st.session_state['current_model']
+                    st.write(f"Using model from session state: {type(current_model)}")  # 打印模型类型，确认是正确的模型
+                else:
+                    current_model = load_global_model()  # 加载初始模型
+                    st.write("Model loaded as no model was found in session state.")  # 输出模型加载信息
+
+            
             NIHSS = st.number_input('NIHSS', min_value = 4,max_value = 38,value = 10) 
             GCS= st.number_input('GCS', min_value = 0,max_value = 15 ,value = 10) 
             pre_eGFR = st.number_input('pre_eGFR', min_value = 10.00,max_value = 250.00,value = 111.5)
@@ -623,62 +679,111 @@ def prediction_page():
 
             print(features) 
 
-            input_df = pd.DataFrame([features]) 
-            print(input_df) 
+            input_df = pd.DataFrame([features])
+        
             if 'new_data' not in st.session_state:
                 st.session_state['new_data'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
-
+        
+            # Prediction logic
             if st.button('Predict'):
                 try:
-                    output = current_model.predict_proba(input_df)  # 术前模型的预测
+                    input_array = input_df.values.reshape(1, -1)
+            
+                    # For RandomForestClassifier
+                    if isinstance(current_model, RandomForestClassifier):
+                        output = current_model.predict_proba(input_array)
+            
+                        if output.shape[1] == 1:
+                            st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
+                            output = np.hstack([1 - output, output])
+            
+                        probability = output[:, 1]
+            
+                        # SHAP for RandomForestClassifier
+                        explainer = shap.TreeExplainer(current_model)
+                        shap_values = explainer.shap_values(input_array)
+                        expected_value = explainer.expected_value[1]
+            
+                    # For DynamicWeightedForest
+                    if isinstance(current_model, DynamicWeightedForest):
+                        # Check if there are any trees in the model
+                        if len(current_model.trees) == 0:
+                            st.warning("No trees found in the DynamicWeightedForest model!")
+                        
+                        output = current_model.predict_proba(input_array)
+                        
+                        # Ensure the output has the expected shape and is valid
+                        if output.shape[1] == 1:
+                            st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
+                            output = np.hstack([1 - output, output])
+                    
+                        probability = output[:, 1]
+                    
+                        # SHAP for DynamicWeightedForest
+                        shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
+                        
+                        # Debugging: Check the output of the DynamicWeightedForest model
+                        print(f"Incremental learning model output: {output}")
+                        print(f"SHAP values: {shap_values}")
+                        print(f"Expected value: {expected_value}")
+                                        
+                        # Ensure shap_values is 1D for visualization
+                        if isinstance(shap_values, list):
+                            shap_values = shap_values[1]  # Use the SHAP values for the positive class (index 1)
+                        elif isinstance(shap_values, np.ndarray):
+                            shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
+                    
+                        st.write(f'Based on feature values, predicted possibility of good functional outcome is {probability}')
+                        # Visualize SHAP values using force plot
+                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
+                        shap_values_flat = shap_values.flatten()
+                        shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
+                        st.write("SHAP values for each feature:")
+                        st.dataframe(shap_df)
 
-                    if output.shape[1] == 1:  # 只有一个类的概率
-                        st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
-                        output = np.hstack([1 - output, output])  # 补充缺失的类别
-
-                    probability = output[:, 1]
-                    explainer = shap.Explainer(current_model)
-         
-                    st_shap(shap.force_plot(expected_value, shap_values[0], input_df))
-
-                    shap_df = pd.DataFrame({
-                        'Feature': input_df.columns,
-                        'SHAP Value': shap_values[0]
-                    })
-                    st.write("SHAP values for each feature:")
-                    st.dataframe(shap_df)
-
+        
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
+
         
-            label = int(st.selectbox('Outcome for Learning', [0, 1]))
-        
+            # Adding data for Incremental Learning
+# Move label input outside of the button click block
+            label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is outside the button's block
+            
             if st.button('Add Data for Learning'):
                 try:
+                    # Add label to the input data
                     new_data = input_df.copy()
                     new_data['label'] = label
                     st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
-        
+            
                     accumulated_data = st.session_state['new_data']
                     X = accumulated_data.drop(columns=['label'])
-                    y = accumulated_data['label'].astype(int)  
-
+                    y = accumulated_data['label'].astype(int)
+            
                     st.write("Accumulated training data preview:")
                     st.dataframe(accumulated_data)
                     st.write(f"Features shape: {X.shape}, Labels shape: {y.shape}")
                     st.write(f"Unique labels in training data: {y.unique()}")
-        
-                    new_tree = DecisionTreeClassifier(random_state=42)
-                    new_tree.fit(X, y)
-        
-                    current_model2.add_tree(new_tree)
-                    current_model2.update_weights(X, y)
-                    current_model2.save_model('global_weighted_forest2.pkl')
-        
-                    st.success("New tree added and weights updated dynamically with accumulated data!")
-        
+            
+                    # Check if there are at least 10 samples before updating the model
+                    if len(accumulated_data) >= 10:
+                        if isinstance(current_model, RandomForestClassifier):
+                            current_model.fit(X, y)
+                            joblib.dump(current_model, 'tuned_rf_intra_BUN.pkl')  # Save the updated model
+                            st.success("RandomForestClassifier model updated successfully!")
+                        elif isinstance(current_model, DynamicWeightedForest):
+                            new_tree = DecisionTreeClassifier(random_state=42)
+                            new_tree.fit(X, y)
+                            current_model.add_tree(new_tree)
+                            current_model.update_weights(X, y)
+                            current_model.save_model('global_weighted_forest2.pkl')  # Save the updated DWF model
+                            st.success("DynamicWeightedForest model updated successfully!")
+                    else:
+                        st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
                 except Exception as e:
                     st.error(f"Error during model update: {e}")
+
 
         elif prediction_type == "Intraoperative_batch":
             st.subheader("Intraoperative Batch Prediction")
