@@ -435,7 +435,7 @@ def prediction_page():
                         elif isinstance(shap_values, np.ndarray):
                             shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
                     
-                        st.write(f"Flattened SHAP values: {shap_values}")
+                        st.write(f'Based on feature values, predicted possibility of good functional outcome is {probability}')
                     
                         shap_values_flat = shap_values.flatten()
                         shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
