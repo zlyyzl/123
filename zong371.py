@@ -602,7 +602,7 @@ def prediction_page():
             st.write("This section will handle intraoperative number predictions.please fill in the blanks with corresponding data. After that,click on the Predict button at the bottom to see the prediction of the classifier.")
         
            def load_global_model_intra():
-                model_file_intra = 'global_weighted_forest_intra.pkl'  # 术前模型
+                model_file_intra = 'global_weighted_forest_intra.pkl'  
                 st.write(f"Attempting to load global model: {model_file_intra}")
                 try:
                     if os.path.exists(model_file_intra):
