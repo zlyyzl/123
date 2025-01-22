@@ -689,20 +689,61 @@ def prediction_page():
                 st.session_state['new_data_intra'] = pd.DataFrame(columns=input_df_intra.columns.tolist() + ['label'])
         
             # 预测逻辑
+            # 预测逻辑
             if st.button('Predict'):
                 try:
                     input_array_intra = input_df_intra.values.reshape(1, -1)
+            
                     if isinstance(current_model_intra, RandomForestClassifier):
+                        # 对于 RandomForestClassifier
                         output = current_model_intra.predict_proba(input_array_intra)
                         probability = output[:, 1]
                         st.write(f'Prediction probability: {probability}')
+            
+                        # SHAP 解释器
+                        explainer = shap.TreeExplainer(current_model_intra)
+                        shap_values = explainer.shap_values(input_array_intra)
+                        expected_value = explainer.expected_value[1]
+            
+                        # 展示 SHAP 力图
+                        st.write("SHAP Force Plot:")
+                        st_shap(shap.force_plot(expected_value, shap_values[1], input_array_intra), height=300)
+            
+                        # 展示每个特征的 SHAP 值
+                        shap_df = pd.DataFrame({
+                            'Feature': input_df_intra.columns,
+                            'SHAP Value': shap_values[1].flatten()
+                        })
+                        st.write("SHAP values for each feature:")
+                        st.dataframe(shap_df)
+            
                     elif isinstance(current_model_intra, DynamicWeightedForest):
+                        # 对于 DynamicWeightedForest
+                        if len(current_model_intra.trees) == 0:
+                            st.warning("No trees found in the DynamicWeightedForest model!")
+                        
                         output = current_model_intra.predict_proba(input_array_intra)
                         probability = output[:, 1]
                         st.write(f'Prediction probability: {probability}')
+            
+                        # SHAP 解释器
+                        shap_values, expected_value = current_model_intra.get_weighted_shap_values(input_array_intra)
+            
+                        # 展示 SHAP 力图
+                        st.write("SHAP Force Plot:")
+                        st_shap(shap.force_plot(expected_value, shap_values, input_array_intra), height=300)
+            
+                        # 展示每个特征的 SHAP 值
+                        shap_df = pd.DataFrame({
+                            'Feature': input_df_intra.columns,
+                            'SHAP Value': shap_values.flatten()
+                        })
+                        st.write("SHAP values for each feature:")
+                        st.dataframe(shap_df)
+            
                 except Exception as e:
                     st.error(f"Error during prediction: {e}")
-        
+
             # 增量学习逻辑
             label = int(st.selectbox('Outcome for Learning', [0, 1]))
             if st.button('Add Data for Learning'):
@@ -718,7 +759,7 @@ def prediction_page():
                     update_incremental_learning_model_intra(current_model_intra, accumulated_data)
                 except Exception as e:
                     st.error(f"Error during model update: {e}")
-        
+
 
 
         elif prediction_type == "Intraoperative_batch":
