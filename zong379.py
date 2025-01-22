@@ -210,7 +210,7 @@ def prediction_page():
             
             """, unsafe_allow_html=True)
 
-        pdf_file_path = r"123.pdf"
+        pdf_file_path = r"User Manual.pdf"
         if os.path.exists(pdf_file_path):
             st.markdown("Click here to download the manual for more detailed usage instructions:")
             with open(pdf_file_path, "rb") as f:
@@ -282,61 +282,26 @@ def prediction_page():
             st.write("Please fill in the blanks with corresponding data.")
 
            # 添加调试模式开关
-            debug_mode = st.sidebar.checkbox("Enable Debug Mode", value=False)
-            
-            # 加载模型的函数
             def load_global_model():
                 model_file = 'global_weighted_forest.pkl'
-                if debug_mode:
-                    st.write(f"Attempting to load global model: {model_file}")
                 try:
                     if os.path.exists(model_file):
                         try:
                             model = DynamicWeightedForest.load_model(model_file)
-                            if debug_mode:
-                                st.write(f"Model loaded successfully: {model_file}")
                             return model
                         except EOFError:
-                            if debug_mode:
-                                st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
                             os.remove(model_file)
-                    else:
-                        if debug_mode:
-                            st.warning(f"Model file not found: {model_file}. Creating a new model.")
-                    
                     # 加载初始模型
                     initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
-                    if debug_mode:
-                        st.write("Initialized a new model from base trees.")
                     return DynamicWeightedForest(initial_model.estimators_)
                 except Exception as e:
-                    if debug_mode:
-                        st.error(f"Failed to load or create global model: {e}")
+                    st.error(f"Failed to load the model: {e}")
                     return None
-            
-            # 重置模型的逻辑
-            if st.button('Reset to Initial Model'):
-                try:
-                    st.session_state['new_data'] = pd.DataFrame()
-                    current_model = joblib.load('tuned_rf_pre_BUN.pkl')  # 直接加载初始模型
-                    st.session_state['current_model'] = current_model
-                    st.success("Model has been reset to the initial model!")
-                except Exception as e:
-                    if debug_mode:
-                        st.error(f"Error during reset: {e}")
-            else:
-                try:
-                    if 'current_model' in st.session_state:
-                        current_model = st.session_state['current_model']
-                        if debug_mode:
-                            st.write(f"Using model from session state: {type(current_model)}")
-                    else:
-                        current_model = load_global_model()
-                        st.success("Preoperative model ready.")
-                except Exception as e:
-                    if debug_mode:
-                        st.error(f"Error loading model: {e}")
-           
+        
+            # 加载或定义当前模型
+            current_model = load_global_model()
+
+                
        # 更新模型的函数
             def update_incremental_learning_model(current_model, new_data):
                 try:
@@ -516,7 +481,7 @@ def prediction_page():
 
             if file_upload is not None: 
                 try: 
-                    data = pd.read_csv(file_upload, sep=',', error_bad_lines=False) 
+                    data = pd.read_csv(file_upload, sep=',', error_bad_lines=False)          
 
                     if 'MRSI' in data.columns: 
                         y_true = data['MRSI'].values 
@@ -533,19 +498,8 @@ def prediction_page():
                             b64 = base64.b64encode(output_data).decode('UTF-8')
                             download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>'
                             st.markdown(download_link, unsafe_allow_html=True)
-
-                        add_data = st.selectbox('Outcome for Learning', [0, 1])
-                        if st.button('Add Data for Learning'): 
-                            X = data.drop(columns=['MRSI']) 
-                            y = data['MRSI'] 
-                            rf_model2 = model2.named_steps['trained_model']
-                            pre_weighted_forest2 = DynamicWeightedForest(rf_model2.estimators_)
-                            new_tree = DecisionTreeClassifier(random_state=42)
-                            new_tree.fit(X, y) 
-                            pre_weighted_forest2.add_tree(new_tree)
-                            pre_weighted_forest2.update_weights(X, y) 
-                            st.success("New tree added and weights updated dynamically!")
-
+                        
+                        # 绘制AUC曲线和校准图
                         def plot_combined_graphs(y_true, y_scores):
                             fig, axs = plt.subplots(1, 2, figsize=(14, 6))
                             fpr, tpr, _ = roc_curve(y_true, y_scores)
@@ -559,11 +513,11 @@ def prediction_page():
                             axs[0].set_title('Receiver Operating Characteristic (ROC)')
                             axs[0].legend(loc='lower right')
                             axs[0].grid()
-
+                    
                             prob_true, prob_pred = calibration_curve(y_true, y_scores, n_bins=10)
                             axs[1].plot(prob_pred, prob_true, marker='o', label='Calibrated Model', color='b')
                             axs[1].plot([0, 1], [0, 1], linestyle='--', label='Perfectly Calibrated', color='r')
-                            axs[1].set_title('Brier Score Calibration Plot')
+                            axs[1].set_title('Calibration Plot')
                             axs[1].set_xlabel('Mean Predicted Probability')
                             axs[1].set_ylabel('Fraction of Positives')
                             axs[1].set_xlim([0, 1])
@@ -571,7 +525,8 @@ def prediction_page():
                             axs[1].legend()
                             axs[1].grid()
                             st.pyplot(fig)
-
+                    
+                        # 计算性能指标
                         if len(data) >= 10:
                             y_pred = (predictions > 0.5).astype(int)
                             accuracy = accuracy_score(y_true, y_pred)
@@ -579,7 +534,7 @@ def prediction_page():
                             precision = precision_score(y_true, y_pred)
                             f1 = f1_score(y_true, y_pred)
                             roc_auc = auc(*roc_curve(y_true, predictions)[:2])
-
+                    
                             st.write(f"Accuracy: {accuracy:.2f}")
                             st.write(f"Recall: {recall:.2f}")
                             st.write(f"Precision: {precision:.2f}")
@@ -587,16 +542,33 @@ def prediction_page():
                             st.write(f"AUC: {roc_auc:.2f}")
                             brier_score = brier_score_loss(y_true, predictions)
                             st.write(f"Brier Score: {brier_score:.2f}")
-
+                    
                             plot_combined_graphs(y_true, predictions)
-
+                    
+                            # 增量学习条件：样本量大于10且AUC低于0.78
+                            if roc_auc < 0.78:
+                                st.warning("AUC is below 0.78. Starting incremental learning.")
+                                X = data.drop(columns=['MRSI']) 
+                                y = data['MRSI'] 
+                    
+                                rf_model2 = model2.named_steps['trained_model']
+                                pre_weighted_forest2 = DynamicWeightedForest(rf_model2.estimators_)
+                    
+                                # 添加新树并更新权重
+                                new_tree = DecisionTreeClassifier(random_state=42)
+                                new_tree.fit(X, y) 
+                                pre_weighted_forest2.add_tree(new_tree)
+                                pre_weighted_forest2.update_weights(X, y)
+                                st.success("New tree added and weights updated dynamically!")
+                            else:
+                                st.info("AUC is above 0.78. Incremental learning is not triggered.")
+                    
                         else:
                             st.warning("Not enough samples for ROC curve plotting. Please upload at least 10 samples.") 
-
-                            st.write(predictions_df) 
+                    
                     else:                      
-                        predictions = model2.predict_proba(data)[:,1] 
-                        predictions = pd.DataFrame(predictions,columns = ['Predictions'])
+                        predictions = model2.predict_proba(data)[:, 1] 
+                        predictions = pd.DataFrame(predictions, columns=['Predictions'])
                         st.write(predictions)
                         result_data = data.copy() 
                         result_data['Predictions'] = predictions 
@@ -609,7 +581,7 @@ def prediction_page():
                             st.markdown(download_link, unsafe_allow_html=True)
 
                 except Exception as e: 
-                    st.error(f"Error reading the CSV file: {e}") 
+                    pass
                     
         elif prediction_type == "Intraoperative_number":
             st.subheader("Intraoperative Number Prediction")
@@ -617,60 +589,26 @@ def prediction_page():
 
 
             # 添加调试模式开关
-            debug_mode = st.sidebar.checkbox("Enable Debug Mode", value=False)
-            
-            # 加载模型的函数
+
             def load_global_model_intra():
                 model_file_intra = 'global_weighted_forest_intra.pkl'
-                if debug_mode:
-                    st.write(f"Attempting to load global model: {model_file_intra}")
                 try:
                     if os.path.exists(model_file_intra):
                         try:
                             model = DynamicWeightedForest.load_model(model_file_intra)
-                            if debug_mode:
-                                st.write(f"Model loaded successfully: {model_file_intra}")
                             return model
                         except EOFError:
-                            if debug_mode:
-                                st.error(f"Model file is corrupted: {model_file_intra}. Deleting and regenerating...")
                             os.remove(model_file_intra)
-                    else:
-                        if debug_mode:
-                            st.warning(f"Model file not found: {model_file_intra}. Creating a new model.")
-                    
                     # 加载初始模型
                     initial_model = joblib.load('tuned_rf_intra_BUN.pkl')
-                    if debug_mode:
-                        st.write("Initialized a new model from base trees.")
                     return DynamicWeightedForest(initial_model.estimators_)
                 except Exception as e:
-                    if debug_mode:
-                        st.error(f"Failed to load or create global model: {e}")
+                    st.error(f"Failed to load the model: {e}")
                     return None
-            
-            # 重置模型的逻辑
-            if st.button('Reset to Initial Model'):
-                try:
-                    st.session_state['new_data_intra'] = pd.DataFrame()
-                    current_model_intra = joblib.load('tuned_rf_intra_BUN.pkl')  # 直接加载初始模型
-                    st.session_state['current_model_intra'] = current_model_intra
-                    st.success("Model has been reset to the initial model!")
-                except Exception as e:
-                    if debug_mode:
-                        st.error(f"Error during reset: {e}")
-            else:
-                try:
-                    if 'current_model_intra' in st.session_state:
-                        current_model_intra = st.session_state['current_model_intra']
-                        if debug_mode:
-                            st.write(f"Using model from session state: {type(current_model_intra)}")
-                    else:
-                        current_model_intra = load_global_model_intra()
-                        st.success("Intraoperative model ready.")
-                except Exception as e:
-                    if debug_mode:
-                        st.error(f"Error loading model: {e}")
+
+            # 加载或定义当前模型
+            current_model_intra = load_global_model_intra()
+
         
             # 更新模型的函数
             def update_incremental_learning_model_intra(current_model_intra, new_data_intra):
@@ -848,6 +786,7 @@ def prediction_page():
                 try: 
                     data = pd.read_csv(file_upload, sep=',', error_bad_lines=False) 
 
+                    # 判断是否包含真实标签列
                     if 'MRSI' in data.columns: 
                         y_true = data['MRSI'].values 
                         predictions = model4.predict_proba(data)[:, 1] 
@@ -863,20 +802,8 @@ def prediction_page():
                             b64 = base64.b64encode(output_data).decode('UTF-8')
                             download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>'
                             st.markdown(download_link, unsafe_allow_html=True)
-
-                        add_data = st.selectbox('Outcome for Learning', [0, 1])
-                
-                        if st.button('Add Data for Learning'): 
-                            X = data.drop(columns=['MRSI']) 
-                            y = data['MRSI'] 
-                            rf_model4 = model4.named_steps['trained_model']
-                            intra_weighted_forest2 = DynamicWeightedForest(rf_model4.estimators_)
-                            new_tree = DecisionTreeClassifier(random_state=42)
-                            new_tree.fit(X, y) 
-                            intra_weighted_forest2.add_tree(new_tree)
-                            intra_weighted_forest2.update_weights(X, y) 
-                            st.success("New tree added and weights updated dynamically!")
-                            
+                        
+                        # 绘制AUC曲线和校准图
                         def plot_combined_graphs(y_true, y_scores):
                             fig, axs = plt.subplots(1, 2, figsize=(14, 6))
                             fpr, tpr, _ = roc_curve(y_true, y_scores)
@@ -890,18 +817,20 @@ def prediction_page():
                             axs[0].set_title('Receiver Operating Characteristic (ROC)')
                             axs[0].legend(loc='lower right')
                             axs[0].grid()
-
+                    
                             prob_true, prob_pred = calibration_curve(y_true, y_scores, n_bins=10)
                             axs[1].plot(prob_pred, prob_true, marker='o', label='Calibrated Model', color='b')
                             axs[1].plot([0, 1], [0, 1], linestyle='--', label='Perfectly Calibrated', color='r')
-                            axs[1].set_title('Brier Score Calibration Plot')
+                            axs[1].set_title('Calibration Plot')
                             axs[1].set_xlabel('Mean Predicted Probability')
+                            axs[1].set_ylabel('Fraction of Positives')
                             axs[1].set_xlim([0, 1])
                             axs[1].set_ylim([0, 1])
                             axs[1].legend()
                             axs[1].grid()
                             st.pyplot(fig)
-
+                    
+                        # 计算性能指标
                         if len(data) >= 10:
                             y_pred = (predictions > 0.5).astype(int)
                             accuracy = accuracy_score(y_true, y_pred)
@@ -909,7 +838,7 @@ def prediction_page():
                             precision = precision_score(y_true, y_pred)
                             f1 = f1_score(y_true, y_pred)
                             roc_auc = auc(*roc_curve(y_true, predictions)[:2])
-
+                    
                             st.write(f"Accuracy: {accuracy:.2f}")
                             st.write(f"Recall: {recall:.2f}")
                             st.write(f"Precision: {precision:.2f}")
@@ -917,15 +846,33 @@ def prediction_page():
                             st.write(f"AUC: {roc_auc:.2f}")
                             brier_score = brier_score_loss(y_true, predictions)
                             st.write(f"Brier Score: {brier_score:.2f}")
-
+                    
                             plot_combined_graphs(y_true, predictions)
+                    
+                            # 增量学习条件：样本量大于10且AUC低于0.78
+                            if roc_auc < 0.79:
+                                st.warning("AUC is below 0.79. Starting incremental learning.")
+                                X = data.drop(columns=['MRSI']) 
+                                y = data['MRSI'] 
+                    
+                                rf_model4 = model4.named_steps['trained_model']
+                                intra_weighted_forest2 = DynamicWeightedForest(rf_model4.estimators_)
+                    
+                                # 添加新树并更新权重
+                                new_tree = DecisionTreeClassifier(random_state=42)
+                                new_tree.fit(X, y) 
+                                intra_weighted_forest2.add_tree(new_tree)
+                                intra_weighted_forest2.update_weights(X, y)
+                                st.success("New tree added and weights updated dynamically!")
+                            else:
+                                st.info("AUC is above 0.79. Incremental learning is not triggered.")
+                    
                         else:
                             st.warning("Not enough samples for ROC curve plotting. Please upload at least 10 samples.") 
-
-                            st.write(predictions_df) 
+                    
                     else:                      
-                        predictions = model4.predict_proba(data)[:,1] 
-                        predictions = pd.DataFrame(predictions,columns = ['Predictions'])
+                        predictions = model4.predict_proba(data)[:, 1] 
+                        predictions = pd.DataFrame(predictions, columns=['Predictions'])
                         st.write(predictions)
                         result_data = data.copy() 
                         result_data['Predictions'] = predictions 
@@ -934,11 +881,13 @@ def prediction_page():
                         with open(result_file_path, 'rb') as f:
                             data = f.read()
                             b64 = base64.b64encode(data).decode('UTF-8')
-                            download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>'
+                            download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>' 
                             st.markdown(download_link, unsafe_allow_html=True)
 
+
                 except Exception as e: 
-                    st.error(f"Error reading the CSV file: {e}") 
+                    pass
+       
             
 
         elif prediction_type == "Postoperative_number":
@@ -946,60 +895,26 @@ def prediction_page():
             st.write("This section will handle postoperative number predictions.please fill in the blanks with corresponding data. After that,click on the Predict button at the bottom to see the prediction of the classifier.")
 
             # 添加调试模式开关
-            debug_mode = st.sidebar.checkbox("Enable Debug Mode", value=False)
-            
-            # 加载模型的函数
+
             def load_global_model_post():
                 model_file_post = 'global_weighted_forest_post.pkl'
-                if debug_mode:
-                    st.write(f"Attempting to load global model: {model_file_post}")
                 try:
                     if os.path.exists(model_file_post):
                         try:
                             model = DynamicWeightedForest.load_model(model_file_post)
-                            if debug_mode:
-                                st.write(f"Model loaded successfully: {model_file_post}")
                             return model
                         except EOFError:
-                            if debug_mode:
-                                st.error(f"Model file is corrupted: {model_file_post}. Deleting and regenerating...")
                             os.remove(model_file_post)
-                    else:
-                        if debug_mode:
-                            st.warning(f"Model file not found: {model_file_post}. Creating a new model.")
-                    
                     # 加载初始模型
                     initial_model = joblib.load('tuned_rf_post_BUN.pkl')
-                    if debug_mode:
-                        st.write("Initialized a new model from base trees.")
                     return DynamicWeightedForest(initial_model.estimators_)
                 except Exception as e:
-                    if debug_mode:
-                        st.error(f"Failed to load or create global model: {e}")
+                    st.error(f"Failed to load the model: {e}")
                     return None
-            
-            # 重置模型的逻辑
-            if st.button('Reset to Initial Model'):
-                try:
-                    st.session_state['new_data_post'] = pd.DataFrame()
-                    current_model_post = joblib.load('tuned_rf_post_BUN.pkl')  # 直接加载初始模型
-                    st.session_state['current_model_post'] = current_model_post
-                    st.success("Model has been reset to the initial model!")
-                except Exception as e:
-                    if debug_mode:
-                        st.error(f"Error during reset: {e}")
-            else:
-                try:
-                    if 'current_model_post' in st.session_state:
-                        current_model_post = st.session_state['current_model_post']
-                        if debug_mode:
-                            st.write(f"Using model from session state: {type(current_model_post)}")
-                    else:
-                        current_model_post = load_global_model_post()
-                        st.success("Postoperative model ready.")
-                except Exception as e:
-                    if debug_mode:
-                        st.error(f"Error loading model: {e}")
+
+            # 加载或定义当前模型
+            current_model_post = load_global_model_post()
+
         
             # 更新模型的函数
             def update_incremental_learning_model_post(current_model_post, new_data_post):
@@ -1174,7 +1089,6 @@ def prediction_page():
             if file_upload is not None: 
                 try: 
                     data = pd.read_csv(file_upload, sep=',', error_bad_lines=False) 
-
                     if 'MRSI' in data.columns: 
                         y_true = data['MRSI'].values 
                         predictions = model6.predict_proba(data)[:, 1] 
@@ -1190,20 +1104,8 @@ def prediction_page():
                             b64 = base64.b64encode(output_data).decode('UTF-8')
                             download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>'
                             st.markdown(download_link, unsafe_allow_html=True)
-
-                        add_data = st.selectbox('Outcome for Learning', [0, 1])
-                
-                        if st.button('Add Data for Learning'): 
-                            X = data.drop(columns=['MRSI']) 
-                            y = data['MRSI'] 
-                            rf_model6 = model6.named_steps['trained_model']
-                            post_weighted_forest2 = DynamicWeightedForest(rf_model6.estimators_)
-                            new_tree = DecisionTreeClassifier(random_state=42)
-                            new_tree.fit(X, y) 
-                            post_weighted_forest2.add_tree(new_tree)
-                            post_weighted_forest2.update_weights(X, y) 
-                            st.success("New tree added and weights updated dynamically!")
-
+                        
+                        # 绘制AUC曲线和校准图
                         def plot_combined_graphs(y_true, y_scores):
                             fig, axs = plt.subplots(1, 2, figsize=(14, 6))
                             fpr, tpr, _ = roc_curve(y_true, y_scores)
@@ -1217,11 +1119,11 @@ def prediction_page():
                             axs[0].set_title('Receiver Operating Characteristic (ROC)')
                             axs[0].legend(loc='lower right')
                             axs[0].grid()
-
+                    
                             prob_true, prob_pred = calibration_curve(y_true, y_scores, n_bins=10)
                             axs[1].plot(prob_pred, prob_true, marker='o', label='Calibrated Model', color='b')
                             axs[1].plot([0, 1], [0, 1], linestyle='--', label='Perfectly Calibrated', color='r')
-                            axs[1].set_title('Brier Score Calibration Plot')
+                            axs[1].set_title('Calibration Plot')
                             axs[1].set_xlabel('Mean Predicted Probability')
                             axs[1].set_ylabel('Fraction of Positives')
                             axs[1].set_xlim([0, 1])
@@ -1229,7 +1131,8 @@ def prediction_page():
                             axs[1].legend()
                             axs[1].grid()
                             st.pyplot(fig)
-
+                    
+                        # 计算性能指标
                         if len(data) >= 10:
                             y_pred = (predictions > 0.5).astype(int)
                             accuracy = accuracy_score(y_true, y_pred)
@@ -1237,7 +1140,7 @@ def prediction_page():
                             precision = precision_score(y_true, y_pred)
                             f1 = f1_score(y_true, y_pred)
                             roc_auc = auc(*roc_curve(y_true, predictions)[:2])
-
+                    
                             st.write(f"Accuracy: {accuracy:.2f}")
                             st.write(f"Recall: {recall:.2f}")
                             st.write(f"Precision: {precision:.2f}")
@@ -1245,21 +1148,33 @@ def prediction_page():
                             st.write(f"AUC: {roc_auc:.2f}")
                             brier_score = brier_score_loss(y_true, predictions)
                             st.write(f"Brier Score: {brier_score:.2f}")
-                            plot_combined_graphs(y_true, predictions)
-
-                            if roc_auc < 0.75:
-                                st.write("AUC is below 0.75. Retraining with Class Incremental Random Forests.")
                     
+                            plot_combined_graphs(y_true, predictions)
+                    
+                            # 增量学习条件：样本量大于10且AUC低于0.85
+                            if roc_auc < 0.85:
+                                st.warning("AUC is below 0.85. Starting incremental learning.")
                                 X = data.drop(columns=['MRSI']) 
                                 y = data['MRSI'] 
-                                cifr_model.partial_fit(X, y)  
+                    
+                                rf_model6 = model6.named_steps['trained_model']
+                                post_weighted_forest2 = DynamicWeightedForest(rf_model6.estimators_)
+                    
+                                # 添加新树并更新权重
+                                new_tree = DecisionTreeClassifier(random_state=42)
+                                new_tree.fit(X, y) 
+                                post_weighted_forest2.add_tree(new_tree)
+                                post_weighted_forest2.update_weights(X, y)
+                                st.success("New tree added and weights updated dynamically!")
+                            else:
+                                st.info("AUC is above 0.85. Incremental learning is not triggered.")
+                    
                         else:
                             st.warning("Not enough samples for ROC curve plotting. Please upload at least 10 samples.") 
-
-                            st.write(predictions_df) 
+                    
                     else:                      
-                        predictions = model6.predict_proba(data)[:,1] 
-                        predictions = pd.DataFrame(predictions,columns = ['Predictions'])
+                        predictions = model6.predict_proba(data)[:, 1] 
+                        predictions = pd.DataFrame(predictions, columns=['Predictions'])
                         st.write(predictions)
                         result_data = data.copy() 
                         result_data['Predictions'] = predictions 
@@ -1268,11 +1183,13 @@ def prediction_page():
                         with open(result_file_path, 'rb') as f:
                             data = f.read()
                             b64 = base64.b64encode(data).decode('UTF-8')
-                            download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>'
+                            download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>' 
                             st.markdown(download_link, unsafe_allow_html=True)
 
+
                 except Exception as e: 
-                    st.error(f"Error reading the CSV file: {e}")
+                    pass
+
 
     else:  # Other Features
         st.title("Other Features")
@@ -1295,3 +1212,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
