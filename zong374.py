@@ -353,9 +353,9 @@ def prediction_page():
                         auc_score = roc_auc_score(y, y_pred_proba)
                         st.write(f"Initial model AUC on new data: {auc_score:.4f}")
             
-                        # 如果 AUC 低于 0.79，才开始增量学习
-                        if auc_score < 0.79:
-                            st.warning("Initial model AUC is below 0.79. Starting incremental learning.")
+                        # 如果 AUC 低于 0.78，才开始增量学习
+                        if auc_score < 0.78:
+                            st.warning("Initial model AUC is below 0.78. Starting incremental learning.")
                             new_tree = DecisionTreeClassifier(random_state=42)
                             new_tree.fit(X, y)
                             current_model.add_tree(new_tree)
@@ -1017,8 +1017,8 @@ def prediction_page():
                         auc_score = roc_auc_score(y, y_pred_proba)
                         st.write(f"Initial model AUC on new data: {auc_score:.4f}")
             
-                        # 如果 AUC 低于 0.79，才开始增量学习
-                        if auc_score < 0.79:
+                        # 如果 AUC 低于 0.85，才开始增量学习
+                        if auc_score < 0.85:
                             st.warning("Initial model AUC is below 0.85. Starting incremental learning.")
                             new_tree = DecisionTreeClassifier(random_state=42)
                             new_tree.fit(X, y)
