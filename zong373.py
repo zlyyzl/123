@@ -689,7 +689,7 @@ def prediction_page():
                         current_model_intra.add_tree(new_tree)
                         current_model_intra.update_weights(X, y)
                         current_model_intra.save_model('global_weighted_forest_intra.pkl')
-                        st.write("Model updated successfully with incremental learning.")
+                        st.success("DynamicWeightedForest model updated successfully!")
                     else:
                         st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
                 except Exception as e:
@@ -1001,7 +1001,7 @@ def prediction_page():
                         current_model_post.add_tree(new_tree)
                         current_model_post.update_weights(X, y)
                         current_model_post.save_model('global_weighted_forest_post.pkl')
-                        st.write("Model updated successfully with incremental learning.")
+                        st.success("DynamicWeightedForest model updated successfully!")
                     else:
                         st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
                 except Exception as e:
