@@ -523,6 +523,16 @@ def prediction_page():
                         predictions = model2.predict_proba(data)[:, 1] 
                         predictions_df = pd.DataFrame(predictions, columns=['Predictions']) 
                         st.write(predictions)
+                        result_data = data.copy() 
+                        result_data['Predictions'] = predictions_df 
+                        result_file_path = 'predictions_with_results.csv' 
+                        result_data.to_csv(result_file_path, index=False) 
+ 
+                        with open(result_file_path, 'rb') as f: 
+                            output_data = f.read()
+                            b64 = base64.b64encode(output_data).decode('UTF-8')
+                            download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>'
+                            st.markdown(download_link, unsafe_allow_html=True)
                         
                         # 绘制AUC曲线和校准图
                         def plot_combined_graphs(y_true, y_scores):
