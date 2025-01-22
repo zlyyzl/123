@@ -290,7 +290,7 @@ def prediction_page():
                 if debug_mode:
                     st.write(f"Attempting to load global model: {model_file}")
                 try:
-                    if os.path.exists(model_file_intra):
+                    if os.path.exists(model_file):
                         try:
                             model = DynamicWeightedForest.load_model(model_file)
                             if debug_mode:
@@ -332,7 +332,7 @@ def prediction_page():
                             st.write(f"Using model from session state: {type(current_model)}")
                     else:
                         current_model = load_global_model()
-                        st.success("Intraoperative model ready.")
+                        st.success("Preoperative model ready.")
                 except Exception as e:
                     if debug_mode:
                         st.error(f"Error loading model: {e}")
