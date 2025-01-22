@@ -972,7 +972,7 @@ def prediction_page():
             
             # 加载或定义当前模型
             try:
-                current_model_intra = load_global_model_post()
+                current_model_post = load_global_model_post()
                 if debug_mode:
                     st.success("Postoperative model loaded successfully.")
             except Exception as e:
