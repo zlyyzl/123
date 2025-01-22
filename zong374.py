@@ -1123,17 +1123,19 @@ def prediction_page():
             label = int(st.selectbox('Outcome for Learning', [0, 1]))
             if st.button('Add Data for Learning'):
                 try:
-                    new_data_post = input_df_post.copy()
+                    new_data_post= input_df_post.copy()
                     new_data_post['label'] = label
                     st.session_state['new_data_post'] = pd.concat([st.session_state['new_data_post'], new_data_post], ignore_index=True)
-        
+            
                     accumulated_data = st.session_state['new_data_post']
                     st.write("Accumulated training data preview:")
                     st.dataframe(accumulated_data)
-        
+            
+                    # 调用更新增量学习模型的函数
                     update_incremental_learning_model_post(current_model_post, accumulated_data)
                 except Exception as e:
                     st.error(f"Error during model update: {e}")
+
 
         elif prediction_type == "Postoperative_batch":
             st.subheader("Postoperative Batch Prediction")
