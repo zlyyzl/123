@@ -655,37 +655,38 @@ def prediction_page():
                     current_model_intra = load_global_model_intra()  # 加载初始模型
                     st.write("Model loaded as no model was found in session state.")  # 输出模型加载信息
                         
-            NIHSS = st.number_input('NIHSS', min_value = 4, max_value = 38, value = 10) 
-            GCS = st.number_input('GCS', min_value = 0, max_value = 15 , value = 10) 
-            pre_eGFR = st.number_input('pre_eGFR', min_value = 10.00, max_value = 250.00, value = 111.5)
-            pre_glucose = st.number_input('pre_glucose', min_value = 2.50, max_value = 25.00, value = 7.78)
-            PC_ASPECTS = st.number_input('PC_ASPECTS', min_value = 0.0, max_value = 10.0, value = 8.0)
-            Age = st.number_input('Age', min_value = 0, max_value = 120, value = 60)
-            pre_BUN = st.number_input('pre_BUN', min_value = 0.00, max_value = 30.00, value = 10.20)
-        
+            NIHSS = st.number_input('NIHSS', min_value = 4,max_value = 38,value = 10) 
+            GCS= st.number_input('GCS', min_value = 0,max_value = 15 ,value = 10) 
+            pre_eGFR = st.number_input('pre_eGFR', min_value = 10.00,max_value = 250.00,value = 111.5)
+            PC_ASPECTS = st.number_input('PC_ASPECTS', min_value = 0.0,max_value = 10.0,value = 8.0)
+            Age = st.number_input('Age', min_value = 0,max_value = 120,value = 60)
+            pre_BUN = st.number_input('pre_BUN', min_value = 0.20,max_value = 30.00,value = 3.20)
+            procedural_time = st.number_input('procedural time', min_value=0.00, max_value=350.00, value=60.00)          
+
             features = { 
                 'NIHSS': NIHSS, 
                 'GCS': GCS, 
-                'pre_eGFR': pre_eGFR,
-                'pre_glucose': pre_glucose, 
-                'PC_ASPECTS': PC_ASPECTS, 
-                'Age': Age, 
-                'pre_BUN': pre_BUN
-            }
+                'pre_eGFR': pre_eGFR, 
+                'PC_ASPECTS': PC_ASPECTS,
+                'Age': Age,
+                'pre_BUN': pre_BUN,
+                'procedural time': procedural_time                  
+               
+                 }
         
-            input_df = pd.DataFrame([features])
+            input_df_intra = pd.DataFrame([features])
         
-            if 'new_data' not in st.session_state:
-                st.session_state['new_data'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
+            if 'new_data_intra' not in st.session_state:
+                st.session_state['new_data_intra'] = pd.DataFrame(columns=input_df_intra.columns.tolist() + ['label'])
         
             # Prediction logic
             if st.button('Predict'):
                 try:
-                    input_array = input_df.values.reshape(1, -1)
+                    input_array_intra = input_df_intra.values.reshape(1, -1)
             
                     # For RandomForestClassifier
-                    if isinstance(current_model, RandomForestClassifier):
-                        output = current_model.predict_proba(input_array)
+                    if isinstance(current_model_intra, RandomForestClassifier):
+                        output = current_model_intra.predict_proba(input_array_intra)
             
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
@@ -694,17 +695,17 @@ def prediction_page():
                         probability = output[:, 1]
             
                         # SHAP for RandomForestClassifier
-                        explainer = shap.TreeExplainer(current_model)
-                        shap_values = explainer.shap_values(input_array)
+                        explainer = shap.TreeExplainer(current_model_intra)
+                        shap_values = explainer.shap_values(input_array_intra)
                         expected_value = explainer.expected_value[1]
             
                     # For DynamicWeightedForest
-                    if isinstance(current_model, DynamicWeightedForest):
+                    if isinstance(current_model_intra, DynamicWeightedForest):
                         # Check if there are any trees in the model
-                        if len(current_model.trees) == 0:
+                        if len(current_model_intra.trees) == 0:
                             st.warning("No trees found in the DynamicWeightedForest model!")
                         
-                        output = current_model.predict_proba(input_array)
+                        output = current_model_intra.predict_proba(input_array_intra)
                         
                         # Ensure the output has the expected shape and is valid
                         if output.shape[1] == 1:
@@ -714,7 +715,7 @@ def prediction_page():
                         probability = output[:, 1]
                     
                         # SHAP for DynamicWeightedForest
-                        shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
+                        shap_values, expected_value = current_model_intra.get_weighted_shap_values(input_array)
                         
                         # Debugging: Check the output of the DynamicWeightedForest model
                         print(f"Incremental learning model output: {output}")
@@ -747,11 +748,11 @@ def prediction_page():
             if st.button('Add Data for Learning'):
                 try:
                     # Add label to the input data
-                    new_data = input_df.copy()
-                    new_data['label'] = label
-                    st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
+                    new_data_intra = input_df.copy()
+                    new_data_intra['label'] = label
+                    st.session_state['new_data_intra'] = pd.concat([st.session_state['new_data_intra'], new_data_intra], ignore_index=True)
             
-                    accumulated_data = st.session_state['new_data']
+                    accumulated_data = st.session_state['new_data_intra']
                     X = accumulated_data.drop(columns=['label'])
                     y = accumulated_data['label'].astype(int)
             
@@ -762,16 +763,16 @@ def prediction_page():
             
                     # Check if there are at least 10 samples before updating the model
                     if len(accumulated_data) >= 10:
-                        if isinstance(current_model, RandomForestClassifier):
-                            current_model.fit(X, y)
-                            joblib.dump(current_model, 'tuned_rf_pre_BUN.pkl')  # Save the updated model
+                        if isinstance(current_model_intra, RandomForestClassifier):
+                            current_model_intra.fit(X, y)
+                            joblib.dump(current_model_intra, 'tuned_rf_intra_BUN.pkl')  # Save the updated model
                             st.success("RandomForestClassifier model updated successfully!")
-                        elif isinstance(current_model, DynamicWeightedForest):
+                        elif isinstance(current_modelpre, DynamicWeightedForest):
                             new_tree = DecisionTreeClassifier(random_state=42)
                             new_tree.fit(X, y)
-                            current_model.add_tree(new_tree)
-                            current_model.update_weights(X, y)
-                            current_model.save_model('global_weighted_forest.pkl')  # Save the updated DWF model
+                            current_modelpre.add_tree(new_tree)
+                            current_modelpre.update_weights(X, y)
+                            current_modelpre.save_model('global_weighted_forestpre.pkl')  # Save the updated DWF model
                             st.success("DynamicWeightedForest model updated successfully!")
                     else:
                         st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
