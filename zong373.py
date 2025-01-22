@@ -729,7 +729,7 @@ def prediction_page():
                         # 对于 RandomForestClassifier
                         output = current_model_intra.predict_proba(input_array_intra)
                         probability = output[:, 1]
-                        st.write(f'Prediction probability: {probability}')
+                        st.write(f'Based on feature values, predicted possibility of good functional outcome is {probability}')
             
                         # SHAP 解释器
                         explainer = shap.TreeExplainer(current_model_intra)
@@ -1040,7 +1040,7 @@ def prediction_page():
                         # 对于 RandomForestClassifier
                         output = current_model_post.predict_proba(input_array_post)
                         probability = output[:, 1]
-                        st.write(f'Prediction probability: {probability}')
+                        st.write(f'Based on feature values, predicted possibility of good functional outcome is {probability}')
             
                         # SHAP 解释器
                         explainer = shap.TreeExplainer(current_model_post)
