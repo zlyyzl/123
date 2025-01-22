@@ -425,10 +425,7 @@ def prediction_page():
                         print(f"Incremental learning model output: {output}")
                         print(f"SHAP values: {shap_values}")
                         print(f"Expected value: {expected_value}")
-                    
-                        # Visualize SHAP values using force plot
-                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
-                    
+                                        
                         # Ensure shap_values is 1D for visualization
                         if isinstance(shap_values, list):
                             shap_values = shap_values[1]  # Use the SHAP values for the positive class (index 1)
@@ -436,7 +433,8 @@ def prediction_page():
                             shap_values = shap_values.flatten()  # Flatten to ensure it's 1D
                     
                         st.write(f'Based on feature values, predicted possibility of good functional outcome is {probability}')
-                    
+                        # Visualize SHAP values using force plot
+                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
                         shap_values_flat = shap_values.flatten()
                         shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
                         st.write("SHAP values for each feature:")
