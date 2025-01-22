@@ -336,23 +336,38 @@ def prediction_page():
                 except Exception as e:
                     if debug_mode:
                         st.error(f"Error loading model: {e}")
-
-            
+           
+       # 更新模型的函数
             def update_incremental_learning_model(current_model, new_data):
-                # Ensure we have at least 10 samples before applying incremental learning
-                if len(new_data) >= 10:
-                    # Perform incremental learning here
-                    X = new_data.drop(columns=['label'])
-                    y = new_data['label']
+                try:
+                    if len(new_data) >= 10:  # 样本数量检查
+                        X = new_data.drop(columns=['label'])
+                        y = new_data['label'].astype(int)  # 确保标签为整数
             
-                    # For example, retrain or update model
-                    current_model.fit(X, y)
+                        # 计算初始模型在新样本上的 AUC
+                        if isinstance(current_model, RandomForestClassifier):
+                            y_pred_proba = current_model.predict_proba(X)[:, 1]
+                        elif isinstance(current_model, DynamicWeightedForest):
+                            y_pred_proba = current_model.predict_proba(X)[:, 1]
             
-                    # Optionally, save the updated model
-                    current_model.save_model('global_weighted_forest.pkl')
-                    print("Model updated successfully with incremental learning.")
-                else:
-                    print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+                        auc_score = roc_auc_score(y, y_pred_proba)
+                        st.write(f"Initial model AUC on new data: {auc_score:.4f}")
+            
+                        # 如果 AUC 低于 0.79，才开始增量学习
+                        if auc_score < 0.79:
+                            st.warning("Initial model AUC is below 0.79. Starting incremental learning.")
+                            new_tree = DecisionTreeClassifier(random_state=42)
+                            new_tree.fit(X, y)
+                            current_model.add_tree(new_tree)
+                            current_model.update_weights(X, y)
+                            current_model.save_model('global_weighted_forest.pkl')
+                            st.success("Model updated successfully with incremental learning!")
+                        else:
+                            st.info("Initial model AUC is sufficient. Incremental learning is not triggered.")
+                    else:
+                        st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+                except Exception as e:
+                    st.error(f"Error during model update: {e}")
 
                         
             NIHSS = st.number_input('NIHSS', min_value = 4, max_value = 38, value = 10) 
@@ -441,40 +456,19 @@ def prediction_page():
 
         
             # Adding data for Incremental Learning
-# Move label input outside of the button click block
-            label = int(st.selectbox('Outcome for Learning', [0, 1]))  # Ensure this is outside the button's block
-            
+            label = int(st.selectbox('Outcome for Learning', [0, 1]))
             if st.button('Add Data for Learning'):
                 try:
-                    # Add label to the input data
                     new_data = input_df.copy()
                     new_data['label'] = label
                     st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
             
                     accumulated_data = st.session_state['new_data']
-                    X = accumulated_data.drop(columns=['label'])
-                    y = accumulated_data['label'].astype(int)
-            
                     st.write("Accumulated training data preview:")
                     st.dataframe(accumulated_data)
-                    st.write(f"Features shape: {X.shape}, Labels shape: {y.shape}")
-                    st.write(f"Unique labels in training data: {y.unique()}")
             
-                    # Check if there are at least 10 samples before updating the model
-                    if len(accumulated_data) >= 10:
-                        if isinstance(current_model, RandomForestClassifier):
-                            current_model.fit(X, y)
-                            joblib.dump(current_model, 'tuned_rf_pre_BUN.pkl')  # Save the updated model
-                            st.success("RandomForestClassifier model updated successfully!")
-                        elif isinstance(current_model, DynamicWeightedForest):
-                            new_tree = DecisionTreeClassifier(random_state=42)
-                            new_tree.fit(X, y)
-                            current_model.add_tree(new_tree)
-                            current_model.update_weights(X, y)
-                            current_model.save_model('global_weighted_forest.pkl')  # Save the updated DWF model
-                            st.success("DynamicWeightedForest model updated successfully!")
-                    else:
-                        st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+                    # 调用更新增量学习模型的函数
+                    update_incremental_learning_model(current_model, accumulated_data)
                 except Exception as e:
                     st.error(f"Error during model update: {e}")
 
