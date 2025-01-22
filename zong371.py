@@ -689,7 +689,6 @@ def prediction_page():
                 st.session_state['new_data_intra'] = pd.DataFrame(columns=input_df_intra.columns.tolist() + ['label'])
         
             # 预测逻辑
-            # 预测逻辑
             if st.button('Predict'):
                 try:
                     input_array_intra = input_df_intra.values.reshape(1, -1)
@@ -731,7 +730,7 @@ def prediction_page():
             
                         # 展示 SHAP 力图
                         st.write("SHAP Force Plot:")
-                        st_shap(shap.force_plot(expected_value, shap_values, input_array_intra), height=300)
+                        st_shap(shap.force_plot(expected_value, shap_values, input_array_intra))
             
                         # 展示每个特征的 SHAP 值
                         shap_df = pd.DataFrame({
