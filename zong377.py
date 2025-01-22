@@ -970,28 +970,14 @@ def prediction_page():
                         st.error(f"Failed to load or create global model: {e}")
                     return None
             
-            # 重置模型的逻辑
-            if st.button('Reset to Initial Model'):
-                try:
-                    st.session_state['new_data_post'] = pd.DataFrame()
-                    current_model_post = joblib.load('tuned_rf_post_BUN.pkl')  # 直接加载初始模型
-                    st.session_state['current_model_post'] = current_model_post
-                    st.success("Model has been reset to the initial model!")
-                except Exception as e:
-                    if debug_mode:
-                        st.error(f"Error during reset: {e}")
-            else:
-                try:
-                    if 'current_model_post' in st.session_state:
-                        current_model_post = st.session_state['current_model_post']
-                        if debug_mode:
-                            st.write(f"Using model from session state: {type(current_model_post)}")
-                    else:
-                        current_model_post = load_global_model_post()
-                        st.success("Postoperative model ready.")
-                except Exception as e:
-                    if debug_mode:
-                        st.error(f"Error loading model: {e}")
+            # 加载或定义当前模型
+            try:
+                current_model_intra = load_global_model_post()
+                if debug_mode:
+                    st.success("Postoperative model loaded successfully.")
+            except Exception as e:
+                if debug_mode:
+                    st.error(f"Error loading model: {e}")
         
             # 更新模型的函数
             def update_incremental_learning_model_post(current_model_post, new_data_post):
