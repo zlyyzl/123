@@ -605,6 +605,8 @@ def prediction_page():
                             download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>' 
                             st.markdown(download_link, unsafe_allow_html=True)
 
+                except Exception as e: 
+                    pass
                     
         elif prediction_type == "Intraoperative_number":
             st.subheader("Intraoperative Number Prediction")
