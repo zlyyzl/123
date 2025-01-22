@@ -603,57 +603,57 @@ def prediction_page():
         
   
             def load_global_model():
-                model_file = 'global_weighted_forest2.pkl'  # 术前模型
+                model_file_intra = 'global_weighted_forest2.pkl'  # 术中模型
                 st.write(f"Attempting to load global model: {model_file}")
                 try:
-                    if os.path.exists(model_file):
+                    if os.path.exists(model_file_intra):
                         try:
-                            model = DynamicWeightedForest.load_model(model_file)
-                            st.write(f"Model loaded successfully: {model_file}")
+                            model = DynamicWeightedForest.load_model(model_file_intra)
+                            st.write(f"Model loaded successfully: {model_file_intra}")
                             return model
                         except EOFError:
-                            st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
-                            os.remove(model_file)
+                            st.error(f"Model file is corrupted: {model_file_intra}. Deleting and regenerating...")
+                            os.remove(model_file_intra)
                     else:
-                        st.warning(f"Model file not found: {model_file}. Creating a new model.")
+                        st.warning(f"Model file not found: {model_file_intra}. Creating a new model.")
                     
                     # 加载初始模型
-                    initial_model = joblib.load('tuned_rf_intra_BUN.pkl')
+                    initial_model_intra = joblib.load('tuned_rf_intra_BUN.pkl')
                     st.write("Initialized a new model from base trees.")
-                    return DynamicWeightedForest(initial_model.estimators_)
+                    return DynamicWeightedForest(initial_model_intra.estimators_)
                 except Exception as e:
                     st.error(f"Failed to load or create global model: {e}")
                     return None
             
-            def update_incremental_learning_model(current_model, new_data):
+            def update_incremental_learning_model(current_model_intra, new_data):
                 # Ensure we have at least 10 samples before applying incremental learning
-                if len(new_data) >= 10:
+                if len(new_data_intra) >= 10:
                     # Perform incremental learning here
-                    X = new_data.drop(columns=['label'])
-                    y = new_data['label']
+                    X = new_data_intra.drop(columns=['label'])
+                    y = new_data_intra['label']
             
                     # For example, retrain or update model
-                    current_model.fit(X, y)
+                    current_model_intra.fit(X, y)
             
                     # Optionally, save the updated model
-                    current_model.save_model('global_weighted_forest2.pkl')
+                    current_model_intra.save_model('global_weighted_forest2.pkl')
                     print("Model updated successfully with incremental learning.")
                 else:
                     print("Not enough data to apply incremental learning. Please provide at least 10 samples.")
 
             if st.button('Reset to Initial Model'):
                 # Reset everything and load the initial model directly
-                st.session_state['new_data'] = pd.DataFrame()  # 清空增量学习的数据
-                current_model = joblib.load('tuned_rf_intra_BUN.pkl')  # 直接加载初始模型
-                st.session_state['current_model'] = current_model  # 将初始模型存储到 session state
+                st.session_state['new_data_intra'] = pd.DataFrame()  # 清空增量学习的数据
+                current_model_intra = joblib.load('tuned_rf_pre_BUN.pkl')  # 直接加载初始模型
+                st.session_state['current_model_intra'] = current_model_intra  # 将初始模型存储到 session state
                 st.success("Model has been reset to the initial model!")
             else:
                 # 使用之前加载的模型
-                if 'current_model' in st.session_state:
-                    current_model = st.session_state['current_model']
-                    st.write(f"Using model from session state: {type(current_model)}")  # 打印模型类型，确认是正确的模型
+                if 'current_model_intra' in st.session_state:
+                    current_model_intra = st.session_state['current_model_intra']
+                    st.write(f"Using model from session state: {type(current_model_intra)}")  # 打印模型类型，确认是正确的模型
                 else:
-                    current_model = load_global_model()  # 加载初始模型
+                    current_model_intra = load_global_model2()  # 加载初始模型
                     st.write("Model loaded as no model was found in session state.")  # 输出模型加载信息
 
             
@@ -679,19 +679,20 @@ def prediction_page():
 
             print(features) 
 
-            input_df = pd.DataFrame([features])
+            input_df_intra = pd.DataFrame([features])
         
-            if 'new_data' not in st.session_state:
-                st.session_state['new_data'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
+            if 'new_data_intra' not in st.session_state:
+                st.session_state['new_data_intra'] = pd.DataFrame(columns=input_df.columns.tolist() + ['label'])
+
         
             # Prediction logic
             if st.button('Predict'):
                 try:
-                    input_array = input_df.values.reshape(1, -1)
+                    input_array = input_df_intra.values.reshape(1, -1)
             
                     # For RandomForestClassifier
-                    if isinstance(current_model, RandomForestClassifier):
-                        output = current_model.predict_proba(input_array)
+                    if isinstance(current_model_intra, RandomForestClassifier):
+                        output = current_model_intra.predict_proba(input_array)
             
                         if output.shape[1] == 1:
                             st.warning("The model seems to predict only one class. Adding probabilities for the missing class.")
@@ -700,17 +701,17 @@ def prediction_page():
                         probability = output[:, 1]
             
                         # SHAP for RandomForestClassifier
-                        explainer = shap.TreeExplainer(current_model)
+                        explainer = shap.TreeExplainer(current_model_intra)
                         shap_values = explainer.shap_values(input_array)
                         expected_value = explainer.expected_value[1]
             
                     # For DynamicWeightedForest
-                    if isinstance(current_model, DynamicWeightedForest):
+                    if isinstance(current_model_intra, DynamicWeightedForest):
                         # Check if there are any trees in the model
-                        if len(current_model.trees) == 0:
+                        if len(current_model_intra.trees) == 0:
                             st.warning("No trees found in the DynamicWeightedForest model!")
                         
-                        output = current_model.predict_proba(input_array)
+                        output = current_model_intra.predict_proba(input_array)
                         
                         # Ensure the output has the expected shape and is valid
                         if output.shape[1] == 1:
@@ -720,7 +721,7 @@ def prediction_page():
                         probability = output[:, 1]
                     
                         # SHAP for DynamicWeightedForest
-                        shap_values, expected_value = current_model.get_weighted_shap_values(input_array)
+                        shap_values, expected_value = current_model_intra.get_weighted_shap_values(input_array)
                         
                         # Debugging: Check the output of the DynamicWeightedForest model
                         print(f"Incremental learning model output: {output}")
@@ -753,11 +754,11 @@ def prediction_page():
             if st.button('Add Data for Learning'):
                 try:
                     # Add label to the input data
-                    new_data = input_df.copy()
-                    new_data['label'] = label
-                    st.session_state['new_data'] = pd.concat([st.session_state['new_data'], new_data], ignore_index=True)
+                    new_data_intra = input_df_intra.copy()
+                    new_data_intra['label'] = label
+                    st.session_state['new_data_intra'] = pd.concat([st.session_state['new_data_intra'], new_data_intra], ignore_index=True)
             
-                    accumulated_data = st.session_state['new_data']
+                    accumulated_data = st.session_state['new_data_intra']
                     X = accumulated_data.drop(columns=['label'])
                     y = accumulated_data['label'].astype(int)
             
@@ -768,16 +769,16 @@ def prediction_page():
             
                     # Check if there are at least 10 samples before updating the model
                     if len(accumulated_data) >= 10:
-                        if isinstance(current_model, RandomForestClassifier):
-                            current_model.fit(X, y)
-                            joblib.dump(current_model, 'tuned_rf_intra_BUN.pkl')  # Save the updated model
+                        if isinstance(current_model_intra, RandomForestClassifier):
+                            current_model_intra.fit(X, y)
+                            joblib.dump(current_model_intra, 'tuned_rf_intra_BUN.pkl')  # Save the updated model
                             st.success("RandomForestClassifier model updated successfully!")
-                        elif isinstance(current_model, DynamicWeightedForest):
+                        elif isinstance(current_model_intra, DynamicWeightedForest):
                             new_tree = DecisionTreeClassifier(random_state=42)
                             new_tree.fit(X, y)
-                            current_model.add_tree(new_tree)
-                            current_model.update_weights(X, y)
-                            current_model.save_model('global_weighted_forest2.pkl')  # Save the updated DWF model
+                            current_model_intra.add_tree(new_tree)
+                            current_model_intra.update_weights(X, y)
+                            current_model_intra.save_model('global_weighted_forest2.pkl')  # Save the updated DWF model
                             st.success("DynamicWeightedForest model updated successfully!")
                     else:
                         st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
