@@ -608,8 +608,7 @@ def prediction_page():
 
             # 加载或定义当前模型
             current_model_intra = load_global_model_intra()
-            if current_model_intra:
-                st.success("Intraoperative model loaded successfully.")
+
         
             # 更新模型的函数
             def update_incremental_learning_model_intra(current_model_intra, new_data_intra):
@@ -915,8 +914,7 @@ def prediction_page():
 
             # 加载或定义当前模型
             current_model_post = load_global_model_post()
-            if current_model_post:
-                st.success("Postoperative model loaded successfully.")
+
         
             # 更新模型的函数
             def update_incremental_learning_model_post(current_model_post, new_data_post):
