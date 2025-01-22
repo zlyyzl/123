@@ -283,46 +283,45 @@ def prediction_page():
 
            # 添加调试模式开关
             debug_mode = st.sidebar.checkbox("Enable Debug Mode", value=False)
-            
-        # 加载模型的函数
-        def load_global_model():
-            model_file = 'global_weighted_forest.pkl'
-            if debug_mode:
-                st.write(f"Attempting to load global model: {model_file}")
-            try:
-                if os.path.exists(model_file):
-                    try:
-                        model = DynamicWeightedForest.load_model(model_file)
-                        if debug_mode:
-                            st.write(f"Model loaded successfully: {model_file}")
-                        return model
-                    except EOFError:
-                        if debug_mode:
-                            st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
-                        os.remove(model_file)
-                else:
-                    if debug_mode:
-                        st.warning(f"Model file not found: {model_file}. Creating a new model.")
                 
-                # 加载初始模型
-                initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
+            # 加载模型的函数
+            def load_global_model():
+                model_file = 'global_weighted_forest.pkl'
                 if debug_mode:
-                    st.write("Initialized a new model from base trees.")
-                return DynamicWeightedForest(initial_model.estimators_)
+                    st.write(f"Attempting to load global model: {model_file}")
+                try:
+                    if os.path.exists(model_file):
+                        try:
+                            model = DynamicWeightedForest.load_model(model_file)
+                            if debug_mode:
+                                st.write(f"Model loaded successfully: {model_file}")
+                            return model
+                        except EOFError:
+                            if debug_mode:
+                                st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
+                            os.remove(model_file)
+                    else:
+                        if debug_mode:
+                            st.warning(f"Model file not found: {model_file}. Creating a new model.")
+                    
+                    # 加载初始模型
+                    initial_model = joblib.load('tuned_rf_pre_BUN.pkl')
+                    if debug_mode:
+                        st.write("Initialized a new model from base trees.")
+                    return DynamicWeightedForest(initial_model.estimators_)
+                except Exception as e:
+                    if debug_mode:
+                        st.error(f"Failed to load or create global model: {e}")
+                    return None
+            
+            # 加载或定义当前模型
+            try:
+                current_model = load_global_model()
+                if debug_mode:
+                    st.success("Preoperative model loaded successfully.")
             except Exception as e:
                 if debug_mode:
-                    st.error(f"Failed to load or create global model: {e}")
-                return None
-        
-        # 加载或定义当前模型
-        try:
-            current_model = load_global_model()
-            if debug_mode:
-                st.success("Preoperative model loaded successfully.")
-        except Exception as e:
-            if debug_mode:
-                st.error(f"Error loading model: {e}")
-
+                    st.error(f"Error loading model: {e}")
            
        # 更新模型的函数
             def update_incremental_learning_model(current_model, new_data):
