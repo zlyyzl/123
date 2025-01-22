@@ -602,29 +602,61 @@ def prediction_page():
             st.write("This section will handle intraoperative number predictions.please fill in the blanks with corresponding data. After that,click on the Predict button at the bottom to see the prediction of the classifier.")
 
 
-            # 加载术中模型
+            # 添加调试模式开关
+            debug_mode = st.sidebar.checkbox("Enable Debug Mode", value=False)
+            
+            # 加载模型的函数
             def load_global_model_intra():
                 model_file_intra = 'global_weighted_forest_intra.pkl'
-                st.write(f"Attempting to load global model: {model_file_intra}")
+                if debug_mode:
+                    st.write(f"Attempting to load global model: {model_file_intra}")
                 try:
                     if os.path.exists(model_file_intra):
                         try:
                             model = DynamicWeightedForest.load_model(model_file_intra)
-                            st.write(f"Model loaded successfully: {model_file_intra}")
+                            if debug_mode:
+                                st.write(f"Model loaded successfully: {model_file_intra}")
                             return model
                         except EOFError:
-                            st.error(f"Model file is corrupted: {model_file_intra}. Deleting and regenerating...")
+                            if debug_mode:
+                                st.error(f"Model file is corrupted: {model_file_intra}. Deleting and regenerating...")
                             os.remove(model_file_intra)
                     else:
-                        st.warning(f"Model file not found: {model_file_intra}. Creating a new model.")
-        
+                        if debug_mode:
+                            st.warning(f"Model file not found: {model_file_intra}. Creating a new model.")
+                    
                     # 加载初始模型
                     initial_model = joblib.load('tuned_rf_intra_BUN.pkl')
-                    st.write("Initialized a new model from base trees.")
+                    if debug_mode:
+                        st.write("Initialized a new model from base trees.")
                     return DynamicWeightedForest(initial_model.estimators_)
                 except Exception as e:
-                    st.error(f"Failed to load or create global model: {e}")
+                    if debug_mode:
+                        st.error(f"Failed to load or create global model: {e}")
                     return None
+            
+            # 重置模型的逻辑
+            if st.button('Reset to Initial Model'):
+                try:
+                    st.session_state['new_data_intra'] = pd.DataFrame()
+                    current_model_intra = joblib.load('tuned_rf_intra_BUN.pkl')  # 直接加载初始模型
+                    st.session_state['current_model_intra'] = current_model_intra
+                    st.success("Model has been reset to the initial model!")
+                except Exception as e:
+                    if debug_mode:
+                        st.error(f"Error during reset: {e}")
+            else:
+                try:
+                    if 'current_model_intra' in st.session_state:
+                        current_model_intra = st.session_state['current_model_intra']
+                        if debug_mode:
+                            st.write(f"Using model from session state: {type(current_model_intra)}")
+                    else:
+                        current_model_intra = load_global_model_intra()
+                        st.success("Intraoperative model ready.")
+                except Exception as e:
+                    if debug_mode:
+                        st.error(f"Error loading model: {e}")
         
             # 更新模型的函数
             def update_incremental_learning_model_intra(current_model_intra, new_data_intra):
@@ -642,26 +674,6 @@ def prediction_page():
                         st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
                 except Exception as e:
                     st.error(f"Error during model update: {e}")
-        
-            # 加载或重置模型逻辑
-            if st.button('Reset to Initial Model'):
-                try:
-                    st.session_state['new_data_intra'] = pd.DataFrame()
-                    current_model_intra = joblib.load('tuned_rf_intra_BUN.pkl')  # 直接加载初始模型
-                    st.session_state['current_model_intra'] = current_model_intra
-                    st.success("Model has been reset to the initial model!")
-                except Exception as e:
-                    st.error(f"Error during reset: {e}")
-            else:
-                try:
-                    if 'current_model_intra' in st.session_state:
-                        current_model_intra = st.session_state['current_model_intra']
-                        st.write(f"Using model from session state: {type(current_model_intra)}")
-                    else:
-                        current_model_intra = load_global_model_intra()
-                        st.write("Model loaded as no model was found in session state.")
-                except Exception as e:
-                    st.error(f"Error loading model: {e}")
         
             # 用户输入字段
             NIHSS = st.number_input('NIHSS', min_value=4, max_value=38, value=10)
