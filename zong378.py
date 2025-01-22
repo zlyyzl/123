@@ -300,8 +300,7 @@ def prediction_page():
         
             # 加载或定义当前模型
             current_model = load_global_model()
-            if current_model:
-                st.success("Preoperative model loaded successfully.")
+
                 
        # 更新模型的函数
             def update_incremental_learning_model(current_model, new_data):
