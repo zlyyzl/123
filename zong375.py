@@ -955,7 +955,7 @@ def prediction_page():
 
 
                 except Exception as e: 
-                    st.error(f"Error reading the CSV file: {e}") 
+                    pass
        
             
 
@@ -1291,7 +1291,7 @@ def prediction_page():
 
 
                 except Exception as e: 
-                    st.error(f"Error reading the CSV file: {e}")
+                    pass
 
 
     else:  # Other Features
