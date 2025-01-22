@@ -612,7 +612,8 @@ def prediction_page():
             # 添加调试模式开关
             debug_mode = st.sidebar.checkbox("Enable Debug Mode", value=False)
             
-            # 加载模型的函数
+
+           # 加载模型的函数
             def load_global_model_intra():
                 model_file_intra = 'global_weighted_forest_intra.pkl'
                 if debug_mode:
@@ -642,28 +643,15 @@ def prediction_page():
                         st.error(f"Failed to load or create global model: {e}")
                     return None
             
-            # 重置模型的逻辑
-            if st.button('Reset to Initial Model'):
-                try:
-                    st.session_state['new_data_intra'] = pd.DataFrame()
-                    current_model_intra = joblib.load('tuned_rf_intra_BUN.pkl')  # 直接加载初始模型
-                    st.session_state['current_model_intra'] = current_model_intra
-                    st.success("Model has been reset to the initial model!")
-                except Exception as e:
-                    if debug_mode:
-                        st.error(f"Error during reset: {e}")
-            else:
-                try:
-                    if 'current_model_intra' in st.session_state:
-                        current_model_intra = st.session_state['current_model_intra']
-                        if debug_mode:
-                            st.write(f"Using model from session state: {type(current_model_intra)}")
-                    else:
-                        current_model_intra = load_global_model_intra()
-                        st.success("Intraoperative model ready.")
-                except Exception as e:
-                    if debug_mode:
-                        st.error(f"Error loading model: {e}")
+            # 加载或定义当前模型
+            try:
+                current_model_intra = load_global_model_intra()
+                if debug_mode:
+                    st.success("Intraoperative model loaded successfully.")
+            except Exception as e:
+                if debug_mode:
+                    st.error(f"Error loading model: {e}")
+
         
             # 更新模型的函数
             def update_incremental_learning_model_intra(current_model_intra, new_data_intra):
