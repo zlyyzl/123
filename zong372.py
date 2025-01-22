@@ -914,52 +914,175 @@ def prediction_page():
         elif prediction_type == "Postoperative_number":
             st.subheader("Postoperative Number Prediction")
             st.write("This section will handle postoperative number predictions.please fill in the blanks with corresponding data. After that,click on the Predict button at the bottom to see the prediction of the classifier.")
-            Age = st.number_input('Age', min_value = 0, max_value = 120, value = 60)
-            GCS= st.number_input('GCS', min_value = 0,max_value = 15 ,value = 10)  
-            PC_ASPECTS = st.number_input('PC_ASPECTS', min_value = 0.0,max_value = 10.0,value = 8.0)
-            procedural_time = st.number_input('procedural time', min_value=0.00, max_value=350.00, value=60.00)
-            post_eGFR = st.number_input('post_eGFR', min_value = 10.00,max_value = 250.00,value = 111.5) 
-            post_NIHSS = st.number_input('post_NIHSS', min_value = 4,max_value = 38,value = 10) 
-                            
-            output=""
-            features = { 
-                'Age': Age, 
-                'GCS': GCS, 
-                'PC_ASPECTS': PC_ASPECTS,
-                'procedural time': procedural_time, 
-                'post_eGFR': post_eGFR,
-                'post_NIHSS': post_NIHSS            
-                
-                  }
 
-            print(features) 
-
-            input_df = pd.DataFrame([features])
-
-            print(input_df) 
+            # 添加调试模式开关
+            debug_mode = st.sidebar.checkbox("Enable Debug Mode", value=False)
             
-            post_weighted_forest = DynamicWeightedForest(model5.estimators_)
-    
-            if st.button('Predict'): 
-                output = model5.predict_proba(input_df)[:,1] 
-                explainer = shap.Explainer(model5)
-                shap_values = explainer.shap_values(input_df)
-                st.write(' Based on feature values, predicted possibility of good functional outcome is '+ str(output))
-                st_shap(shap.force_plot(explainer.expected_value[1], shap_values[1],input_df))
-                shap_df = pd.DataFrame({
-                    'Feature': input_df.columns,
-                    'SHAP Value': shap_values[1].flatten() 
-                 })
-                st.write("SHAP values for each feature:")
-                st.dataframe(shap_df)
+            # 加载模型的函数
+            def load_global_model_intra():
+                model_file_intra = 'global_weighted_forest_intra.pkl'
+                if debug_mode:
+                    st.write(f"Attempting to load global model: {model_file_intra}")
+                try:
+                    if os.path.exists(model_file_intra):
+                        try:
+                            model = DynamicWeightedForest.load_model(model_file_intra)
+                            if debug_mode:
+                                st.write(f"Model loaded successfully: {model_file_intra}")
+                            return model
+                        except EOFError:
+                            if debug_mode:
+                                st.error(f"Model file is corrupted: {model_file_intra}. Deleting and regenerating...")
+                            os.remove(model_file_intra)
+                    else:
+                        if debug_mode:
+                            st.warning(f"Model file not found: {model_file_intra}. Creating a new model.")
+                    
+                    # 加载初始模型
+                    initial_model = joblib.load('tuned_rf_intra_BUN.pkl')
+                    if debug_mode:
+                        st.write("Initialized a new model from base trees.")
+                    return DynamicWeightedForest(initial_model.estimators_)
+                except Exception as e:
+                    if debug_mode:
+                        st.error(f"Failed to load or create global model: {e}")
+                    return None
+            
+            # 重置模型的逻辑
+            if st.button('Reset to Initial Model'):
+                try:
+                    st.session_state['new_data_intra'] = pd.DataFrame()
+                    current_model_intra = joblib.load('tuned_rf_intra_BUN.pkl')  # 直接加载初始模型
+                    st.session_state['current_model_intra'] = current_model_intra
+                    st.success("Model has been reset to the initial model!")
+                except Exception as e:
+                    if debug_mode:
+                        st.error(f"Error during reset: {e}")
+            else:
+                try:
+                    if 'current_model_intra' in st.session_state:
+                        current_model_intra = st.session_state['current_model_intra']
+                        if debug_mode:
+                            st.write(f"Using model from session state: {type(current_model_intra)}")
+                    else:
+                        current_model_intra = load_global_model_intra()
+                        st.success("Intraoperative model ready.")
+                except Exception as e:
+                    if debug_mode:
+                        st.error(f"Error loading model: {e}")
         
-            label = st.selectbox('Outcome for Learning', [0, 1])
-            if st.button('Add Data for Learning'): 
-                new_tree = DecisionTreeClassifier(random_state=42)
-                new_tree.fit(input_df, [label])
-                post_weighted_forest.add_tree(new_tree)
-                post_weighted_forest.update_weights(input_df, [label])
-                st.success("New tree added and weights updated dynamically!")
+            # 更新模型的函数
+            def update_incremental_learning_model_intra(current_model_intra, new_data_intra):
+                try:
+                    if len(new_data_intra) >= 10:
+                        X = new_data_intra.drop(columns=['label'])
+                        y = new_data_intra['label'].astype(int)  # 确保标签为整数
+                        new_tree = DecisionTreeClassifier(random_state=42)
+                        new_tree.fit(X, y)
+                        current_model_intra.add_tree(new_tree)
+                        current_model_intra.update_weights(X, y)
+                        current_model_intra.save_model('global_weighted_forest_intra.pkl')
+                        st.write("Model updated successfully with incremental learning.")
+                    else:
+                        st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
+                except Exception as e:
+                    st.error(f"Error during model update: {e}")
+        
+            # 用户输入字段
+            NIHSS = st.number_input('NIHSS', min_value=4, max_value=38, value=10)
+            GCS = st.number_input('GCS', min_value=0, max_value=15, value=10)
+            pre_eGFR = st.number_input('pre_eGFR', min_value=10.00, max_value=250.00, value=111.5)
+            PC_ASPECTS = st.number_input('PC_ASPECTS', min_value=0.0, max_value=10.0, value=8.0)
+            Age = st.number_input('Age', min_value=0, max_value=120, value=60)
+            pre_BUN = st.number_input('pre_BUN', min_value=0.20, max_value=30.00, value=3.20)
+            procedural_time = st.number_input('procedural time', min_value=0.00, max_value=350.00, value=60.00)
+        
+            # 汇总输入数据
+            features = {
+                'NIHSS': NIHSS,
+                'GCS': GCS,
+                'pre_eGFR': pre_eGFR,
+                'PC_ASPECTS': PC_ASPECTS,
+                'Age': Age,
+                'pre_BUN': pre_BUN,
+                'procedural time': procedural_time
+            }
+            input_df_intra = pd.DataFrame([features])
+        
+            # 初始化增量学习的数据
+            if 'new_data_intra' not in st.session_state:
+                st.session_state['new_data_intra'] = pd.DataFrame(columns=input_df_intra.columns.tolist() + ['label'])
+        
+            # 预测逻辑
+            if st.button('Predict'):
+                try:
+                    input_array_intra = input_df_intra.values.reshape(1, -1)
+            
+                    if isinstance(current_model_intra, RandomForestClassifier):
+                        # 对于 RandomForestClassifier
+                        output = current_model_intra.predict_proba(input_array_intra)
+                        probability = output[:, 1]
+                        st.write(f'Prediction probability: {probability}')
+            
+                        # SHAP 解释器
+                        explainer = shap.TreeExplainer(current_model_intra)
+                        shap_values = explainer.shap_values(input_array_intra)
+                        expected_value = explainer.expected_value[1]
+            
+                        # 展示 SHAP 力图
+                        st.write("SHAP Force Plot:")
+                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
+            
+                        # 展示每个特征的 SHAP 值
+                        shap_df = pd.DataFrame({
+                            'Feature': input_df_intra.columns,
+                            'SHAP Value': shap_values[1].flatten()
+                        })
+                        st.write("SHAP values for each feature:")
+                        st.dataframe(shap_df)
+            
+                    elif isinstance(current_model_intra, DynamicWeightedForest):
+                        # 对于 DynamicWeightedForest
+                        if len(current_model_intra.trees) == 0:
+                            st.warning("No trees found in the DynamicWeightedForest model!")
+                        
+                        output = current_model_intra.predict_proba(input_array_intra)
+                        probability = output[:, 1]
+                        st.write(f'Prediction probability: {probability}')
+            
+                        # SHAP 解释器
+                        shap_values, expected_value = current_model_intra.get_weighted_shap_values(input_array_intra)
+            
+                        # 展示 SHAP 力图
+                        st.write("SHAP Force Plot:")
+                        st_shap(shap.force_plot(expected_value, shap_values, input_array_intra))
+            
+                        # 展示每个特征的 SHAP 值
+                        shap_df = pd.DataFrame({
+                            'Feature': input_df_intra.columns,
+                            'SHAP Value': shap_values.flatten()
+                        })
+                        st.write("SHAP values for each feature:")
+                        st.dataframe(shap_df)
+            
+                except Exception as e:
+                    st.error(f"Error during prediction: {e}")
+
+            # 增量学习逻辑
+            label = int(st.selectbox('Outcome for Learning', [0, 1]))
+            if st.button('Add Data for Learning'):
+                try:
+                    new_data_intra = input_df_intra.copy()
+                    new_data_intra['label'] = label
+                    st.session_state['new_data_intra'] = pd.concat([st.session_state['new_data_intra'], new_data_intra], ignore_index=True)
+        
+                    accumulated_data = st.session_state['new_data_intra']
+                    st.write("Accumulated training data preview:")
+                    st.dataframe(accumulated_data)
+        
+                    update_incremental_learning_model_intra(current_model_intra, accumulated_data)
+                except Exception as e:
+                    st.error(f"Error during model update: {e}")
 
         elif prediction_type == "Postoperative_batch":
             st.subheader("Postoperative Batch Prediction")
