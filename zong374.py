@@ -1010,19 +1010,35 @@ def prediction_page():
             # 更新模型的函数
             def update_incremental_learning_model_post(current_model_post, new_data_post):
                 try:
-                    if len(new_data_post) >= 10:
+                    if len(new_data_post) >= 10:  # 样本数量检查
                         X = new_data_post.drop(columns=['label'])
                         y = new_data_post['label'].astype(int)  # 确保标签为整数
-                        new_tree = DecisionTreeClassifier(random_state=42)
-                        new_tree.fit(X, y)
-                        current_model_post.add_tree(new_tree)
-                        current_model_post.update_weights(X, y)
-                        current_model_post.save_model('global_weighted_forest_post.pkl')
-                        st.success("DynamicWeightedForest model updated successfully!")
+            
+                        # 计算初始模型在新样本上的 AUC
+                        if isinstance(current_model_post, RandomForestClassifier):
+                            y_pred_proba = current_model_post.predict_proba(X)[:, 1]
+                        elif isinstance(current_model_post, DynamicWeightedForest):
+                            y_pred_proba = current_model_post.predict_proba(X)[:, 1]
+            
+                        auc_score = roc_auc_score(y, y_pred_proba)
+                        st.write(f"Initial model AUC on new data: {auc_score:.4f}")
+            
+                        # 如果 AUC 低于 0.79，才开始增量学习
+                        if auc_score < 0.79:
+                            st.warning("Initial model AUC is below 0.79. Starting incremental learning.")
+                            new_tree = DecisionTreeClassifier(random_state=42)
+                            new_tree.fit(X, y)
+                            current_model_post.add_tree(new_tree)
+                            current_model_post.update_weights(X, y)
+                            current_model_post.save_model('global_weighted_forest_intra.pkl')
+                            st.success("Model updated successfully with incremental learning!")
+                        else:
+                            st.info("Initial model AUC is sufficient. Incremental learning is not triggered.")
                     else:
                         st.warning("Not enough data to apply incremental learning. Please provide at least 10 samples.")
                 except Exception as e:
                     st.error(f"Error during model update: {e}")
+
         
             # 用户输入字段
             Age = st.number_input('Age', min_value = 0, max_value = 120, value = 60)
