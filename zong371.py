@@ -92,31 +92,6 @@ self, X):
             st.error(f"Model file {model_name} not found.")
             return None
 
-
-
-def load_global_model2():
-    model_file = 'global_weighted_forest2.pkl'  # 术中模型
-    st.write(f"Attempting to load global model: {model_file}")
-    try:
-        if os.path.exists(model_file):
-            try:
-                model = DynamicWeightedForest.load_model(model_file)
-                st.write(f"Model loaded successfully: {model_file}")
-                return model
-            except EOFError:
-                st.error(f"Model file is corrupted: {model_file}. Deleting and regenerating...")
-                os.remove(model_file)
-        else:
-            st.warning(f"Model file not found: {model_file}. Creating a new model.")
-        
-        # 加载术中初始模型
-        initial_model = joblib.load('tuned_rf_intra_BUN.pkl')
-        st.write("Initialized a new model from base trees.")
-        return DynamicWeightedForest(initial_model.estimators_)
-    except Exception as e:
-        st.error(f"Failed to load or create global model: {e}")
-        return None
-
 def get_db_connection():
     conn = sqlite3.connect('users.db')
     conn.row_factory = sqlite3.Row
