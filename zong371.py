@@ -707,7 +707,7 @@ def prediction_page():
             
                         # 展示 SHAP 力图
                         st.write("SHAP Force Plot:")
-                        st_shap(shap.force_plot(expected_value, shap_values[1], input_array_intra), height=300)
+                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
             
                         # 展示每个特征的 SHAP 值
                         shap_df = pd.DataFrame({
