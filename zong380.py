@@ -604,15 +604,11 @@ def prediction_page():
         
                 except Exception as e:
                     st.error(f"An error occurred: {e}")
-
 `
                     
         elif prediction_type == "Intraoperative_number":
             st.subheader("Intraoperative Number Prediction")
             st.write("This section will handle intraoperative number predictions.please fill in the blanks with corresponding data. After that,click on the Predict button at the bottom to see the prediction of the classifier.")
-
-
-            # 添加调试模式开关
 
             def load_global_model_intra():
                 model_file_intra = 'global_weighted_forest_intra.pkl'
