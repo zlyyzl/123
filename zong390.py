@@ -327,6 +327,7 @@ def prediction_page():
                             new_tree.fit(X, y)
                             current_model.add_tree(new_tree)
                             current_model.update_weights(X, y)
+                            st.success("Model updated successfully with IL!")
                             current_model.save_model('global_weighted_forest.pkl')
                             st.success("Model updated successfully with incremental learning!")
                         else:
