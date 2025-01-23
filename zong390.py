@@ -440,116 +440,182 @@ def prediction_page():
                     st.error(f"Error during model update: {e}")
             
         elif prediction_type == "Preoperative_batch":
-
-            # 定义增量学习模型加载
-            def load_incremental_model():
-                model_file_batch1 = 'global_weighted_forest_updated.pkl'
-                if os.path.exists(model_file_batch1):
-                    try:
-                        return DynamicWeightedForest.load_model(model_file_batch1)
-                    except Exception as e:
-                        st.warning(f"Failed to load incremental model: {e}. Falling back to initial model.")
-                        return None
-                else:
-                    st.info("No incremental model found. Using initial model.")
-                    return None
-        
-            # 加载初始模型
-            def load_initial_model():
-                model_file = 'tuned_rf_pre_BUN_model.pkl'  
-                try:
-                    return joblib.load(model_file)  
-                except Exception as e:
-                    st.error(f"Failed to load initial model: {e}")
-                    return None
-        
-            # 加载增量学习模型或初始模型
-            current_model_batch1 = load_incremental_model()
-            if current_model_batch1:
-                st.write("Incremental model loaded successfully.")
-                current_model = current_model_batch1  # 使用增量学习模型
-            else:
-                st.write("Using initial model.")
-                current_model = load_initial_model()  # 使用初始模型
-        
-            # 确保只有在增量学习时才会保存增量学习模型
-            def save_incremental_model(current_model):
-                if isinstance(current_model, DynamicWeightedForest):
-                    joblib.dump(current_model, 'global_weighted_forest_updated.pkl')
-                    st.success("Incremental model saved successfully.")
-        
-            # 文件上传和预测
-            file_upload = st.file_uploader("Upload CSV file for predictions", type=["csv"])
-        
-            if file_upload is not None:
-                try:
-                    data = pd.read_csv(file_upload, sep=',', error_bad_lines=False)
-                
-                    if 'MRSI' in data.columns:  # 检查是否存在目标列
-                        y_true = data['MRSI'].values
-                        predictions = current_model.predict_proba(data)[:, 1]  # 使用加载的模型进行预测
-                        predictions_df = pd.DataFrame(predictions, columns=['Predictions'])
-                        st.write(predictions)
-                        
-                        result_data = data.copy()
-                        result_data['Predictions'] = predictions_df
-                        result_file_path = 'predictions_with_results.csv'
-                        result_data.to_csv(result_file_path, index=False)
-        
-                        with open(result_file_path, 'rb') as f:
-                            output_data = f.read()
-                            b64 = base64.b64encode(output_data).decode('UTF-8')
-                            download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>'
-                            st.markdown(download_link, unsafe_allow_html=True)
-        
-                        # 计算性能指标和绘制AUC曲线
-                        plot_combined_graphs(y_true, predictions)
-        
-                        if len(data) >= 10:
-                            y_pred = (predictions > 0.5).astype(int)
-                            accuracy = accuracy_score(y_true, y_pred)
-                            recall = recall_score(y_true, y_pred)
-                            precision = precision_score(y_true, y_pred)
-                            f1 = f1_score(y_true, y_pred)
-                            roc_auc = auc(*roc_curve(y_true, predictions)[:2])
-        
-                            st.write(f"Accuracy: {accuracy:.2f}")
-                            st.write(f"Recall: {recall:.2f}")
-                            st.write(f"Precision: {precision:.2f}")
-                            st.write(f"F1 Score: {f1:.2f}")
-                            st.write(f"AUC: {roc_auc:.2f}")
-                            brier_score = brier_score_loss(y_true, predictions)
-                            st.write(f"Brier Score: {brier_score:.2f}")
+                    st.subheader("Preoperative Batch Prediction")                 
+          
+                    def load_incremental_model():
+                        model_file_batch1 = 'global_weighted_forest_updated.pkl'
+                        if os.path.exists(model_file_batch1):
+                            try:
+                                return DynamicWeightedForest.load_model(model_file_batch1)
+                            except Exception as e:
+                                st.warning(f"Failed to load incremental model: {e}. Falling back to initial model.")
+                                return load_initial_model()
                         else:
-                            st.warning("Not enough samples for ROC curve plotting. Please upload at least 10 samples.")
+                            st.info("No incremental model found. Using initial model.")
+                            return load_initial_model()
+        
+                    # 加载初始模型
+                    def load_initial_model():
+        
+                        model_file = 'tuned_rf_pre_BUN_model.pkl'  
+                        try:
+                            return joblib.load(model_file)  
+                        except Exception as e:
+                            st.error(f"Failed to load initial model: {e}")
+                            return None
+        
+                    current_model_batch1 = load_incremental_model()
+                    if current_model_batch1:
+                        st.write("Incremental model loaded successfully.")
+                        current_model = current_model_batch1  
                     else:
-                        st.error("Missing 'MRSI' column in the uploaded file.")
-                
-                except Exception as e:
-                    st.error(f"Error reading the CSV file: {e}")
+                        st.write("Using initial model.")
+                        current_model = load_initial_model()  
         
-            # 触发增量学习条件：AUC低于0.78
-            if roc_auc < 0.78:
-                st.warning("AUC is below 0.78. Starting incremental learning.")
-                X = data.drop(columns=['MRSI'])
-                y = data['MRSI']
-        
-                # 剔除pipeline并进行增量学习
-                rf_model2 = current_model.named_steps['trained_model']  # 去除pipeline，提取核心模型
-                pre_weighted_forest2 = DynamicWeightedForest(rf_model2.estimators_)
-                new_tree = DecisionTreeClassifier(random_state=42)
-                new_tree.fit(X, y)
-                pre_weighted_forest2.add_tree(new_tree)
-                pre_weighted_forest2.update_weights(X, y)
                 
-                # 保存增量学习后的模型
-                save_incremental_model(pre_weighted_forest2)
-                st.success("Incremental learning completed and model updated.")
-            else:
-                st.info("AUC is above 0.78. Incremental learning is not triggered.")
-
-
-
+                    # 绘制ROC曲线函数
+                    def plot_roc_curve(y_true, y_scores): 
+                        fpr, tpr, thresholds = roc_curve(y_true, y_scores) 
+                        roc_auc = auc(fpr, tpr)
+                        plt.figure(figsize=(10, 6)) 
+                        plt.plot(fpr, tpr, color='blue', label='ROC curve (area = %0.2f)' % roc_auc) 
+                        plt.plot([0, 1], [0, 1], color='red', linestyle='--') 
+                        plt.xlim([0.0, 1.0]) 
+                        plt.ylim([0.0, 1.05]) 
+                        plt.xlabel('False Positive Rate') 
+                        plt.ylabel('True Positive Rate')
+                        plt.title('Receiver Operating Characteristic (ROC)') 
+                        plt.legend(loc='lower right') 
+                        plt.grid() 
+                        st.pyplot(plt)
+                
+                    # 生成CSV模板
+                    csv_exporter = openpyxl.Workbook()
+                    sheet = csv_exporter.active
+                    sheet.cell(row=1, column=1).value = 'NIHSS'
+                    sheet.cell(row=1, column=2).value = 'GCS'
+                    sheet.cell(row=1, column=3).value = 'pre_eGFR'
+                    sheet.cell(row=1, column=4).value = 'pre_glucose'
+                    sheet.cell(row=1, column=5).value = 'PC_ASPECTS'
+                    sheet.cell(row=1, column=6).value = 'Age'
+                    sheet.cell(row=1, column=7).value = 'pre_BUN'
+                    csv_file_name = 'for_predictions.csv'
+                    csv_exporter.save(csv_file_name)
+                
+                    if os.path.exists(csv_file_name):
+                        data = open(csv_file_name, 'rb').read()
+                        b64 = base64.b64encode(data).decode('UTF-8')
+                        href = f'<a href="data:file/csv;base64,{b64}" download="{csv_file_name}">Download csv file</a>'
+                        st.markdown(href, unsafe_allow_html=True)
+                    else:
+                        st.error(f"File '{csv_file_name}' not found. Please check the template generation process.")
+                    csv_exporter.close()
+                
+                    # 文件上传
+                    file_upload = st.file_uploader("Upload CSV file for predictions", type=["csv"])
+                
+                    if file_upload is not None: 
+                        try: 
+                            data = pd.read_csv(file_upload, sep=',', error_bad_lines=False)          
+                
+                            if 'MRSI' in data.columns: 
+                                y_true = data['MRSI'].values 
+                                predictions = current_model_batch1.predict_proba(data)[:, 1] 
+                                predictions_df = pd.DataFrame(predictions, columns=['Predictions']) 
+                                st.write(predictions)
+                                result_data = data.copy() 
+                                result_data['Predictions'] = predictions_df 
+                                result_file_path = 'predictions_with_results.csv' 
+                                result_data.to_csv(result_file_path, index=False) 
+                
+                                with open(result_file_path, 'rb') as f: 
+                                    output_data = f.read()
+                                    b64 = base64.b64encode(output_data).decode('UTF-8')
+                                    download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>'
+                                    st.markdown(download_link, unsafe_allow_html=True)
+                
+                                # 绘制AUC曲线和校准图
+                                def plot_combined_graphs(y_true, y_scores):
+                                    fig, axs = plt.subplots(1, 2, figsize=(14, 6))
+                                    fpr, tpr, _ = roc_curve(y_true, y_scores)
+                                    roc_auc = auc(fpr, tpr)
+                                    axs[0].plot(fpr, tpr, color='blue', label='ROC curve (area = %0.2f)' % roc_auc)
+                                    axs[0].plot([0, 1], [0, 1], color='red', linestyle='--')
+                                    axs[0].set_xlim([0.0, 1.0])
+                                    axs[0].set_ylim([0.0, 1.05])
+                                    axs[0].set_xlabel('False Positive Rate')
+                                    axs[0].set_ylabel('True Positive Rate')
+                                    axs[0].set_title('Receiver Operating Characteristic (ROC)')
+                                    axs[0].legend(loc='lower right')
+                                    axs[0].grid()
+                
+                                    prob_true, prob_pred = calibration_curve(y_true, y_scores, n_bins=10)
+                                    axs[1].plot(prob_pred, prob_true, marker='o', label='Calibrated Model', color='b')
+                                    axs[1].plot([0, 1], [0, 1], linestyle='--', label='Perfectly Calibrated', color='r')
+                                    axs[1].set_title('Calibration Plot')
+                                    axs[1].set_xlabel('Mean Predicted Probability')
+                                    axs[1].set_ylabel('Fraction of Positives')
+                                    axs[1].set_xlim([0, 1])
+                                    axs[1].set_ylim([0, 1])
+                                    axs[1].legend()
+                                    axs[1].grid()
+                                    st.pyplot(fig)
+                
+                                # 计算性能指标
+                                if len(data) >= 10:
+                                    y_pred = (predictions > 0.5).astype(int)
+                                    accuracy = accuracy_score(y_true, y_pred)
+                                    recall = recall_score(y_true, y_pred)
+                                    precision = precision_score(y_true, y_pred)
+                                    f1 = f1_score(y_true, y_pred)
+                                    roc_auc = auc(*roc_curve(y_true, predictions)[:2])
+                
+                                    st.write(f"Accuracy: {accuracy:.2f}")
+                                    st.write(f"Recall: {recall:.2f}")
+                                    st.write(f"Precision: {precision:.2f}")
+                                    st.write(f"F1 Score: {f1:.2f}")
+                                    st.write(f"AUC: {roc_auc:.2f}")
+                                    brier_score = brier_score_loss(y_true, predictions)
+                                    st.write(f"Brier Score: {brier_score:.2f}")
+                
+                                    plot_combined_graphs(y_true, predictions)
+                
+                                    # 增量学习条件：样本量大于10且AUC低于0.78
+                                    if roc_auc < 0.78:
+                                        st.warning("AUC is below 0.78. Starting incremental learning.")
+                                        X = data.drop(columns=['MRSI']) 
+                                        y = data['MRSI'] 
+                                        rf_model2 = current_model_batch1.named_steps['trained_model']
+                                        pre_weighted_forest2 = DynamicWeightedForest(rf_model2.estimators_) 
+                                        # 添加新树并更新权重
+                                        new_tree = DecisionTreeClassifier(random_state=42)
+                                        new_tree.fit(X, y) 
+                                        pre_weighted_forest2.add_tree(new_tree)
+                                        pre_weighted_forest2.update_weights(X, y)
+                                        pre_weighted_forest2.save_model('global_weighted_forest_updated.pkl')
+                                        st.success("New tree added and weights updated dynamically! Incremental model saved.")
+                                    else:
+                                        st.info("AUC is above 0.78. Incremental learning is not triggered.")
+                
+                                else:
+                                    st.warning("Not enough samples for ROC curve plotting. Please upload at least 10 samples.") 
+                
+                            else:                      
+                                predictions = current_model_batch1.predict_proba(data)[:, 1] 
+                                predictions = pd.DataFrame(predictions, columns=['Predictions'])
+                                st.write(predictions)
+                                result_data = data.copy() 
+                                result_data['Predictions'] = predictions 
+                                result_file_path = 'predictions_with_results.csv'
+                                result_data.to_csv(result_file_path, index=False)
+                                with open(result_file_path, 'rb') as f:
+                                    data = f.read()
+                                    b64 = base64.b64encode(data).decode('UTF-8')
+                                    download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>' 
+                                    st.markdown(download_link, unsafe_allow_html=True)
+                
+                        except Exception as e: 
+                            pass
 
                     
         elif prediction_type == "Intraoperative_number":
