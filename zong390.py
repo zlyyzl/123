@@ -600,6 +600,14 @@ def prediction_page():
                                         pre_weighted_forest2.add_tree(new_tree)
                                         pre_weighted_forest2.update_weights(X, y)
                                         pre_weighted_forest2.save_model('global_weighted_forest_updated.pkl')
+                                        updated_pipeline = Pipeline([
+                                            ('preprocessing', current_model_batch1.named_steps['preprocessing']),  # 保持原有的预处理步骤
+                                            ('trained_model', pre_weighted_forest2)  # 使用增量学习后的模型
+                                        ])
+                                        
+                                        # 保存增量学习后的模型（包括pipeline）
+                                        joblib.dump(updated_pipeline, 'global_weighted_forest_updated.pkl')
+                                        st.success("Incremental model saved successfully with the pipeline!")
                                         st.success("New tree added and weights updated dynamically! Incremental model saved.")
                                     else:
                                         st.info("AUC is above 0.78. Incremental learning is not triggered.")
