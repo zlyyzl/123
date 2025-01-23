@@ -446,10 +446,10 @@ def prediction_page():
         
             # 定义加载增量学习模型的函数
             def load_incremental_model():
-                model_file = 'global_weighted_forest_updated.pkl'
-                if os.path.exists(model_file):
+                model_file_batch1 = 'global_weighted_forest_updated.pkl'
+                if os.path.exists(model_file_batch1):
                     try:
-                        return DynamicWeightedForest.load_model(model_file)
+                        return DynamicWeightedForest.load_model(model_file_batch1)
                     except Exception as e:
                         st.warning(f"Failed to load incremental model: {e}. Falling back to initial model.")
                         return load_initial_model()
@@ -458,7 +458,7 @@ def prediction_page():
                     return load_initial_model()
         
             # 根据条件选择当前模型
-            current_model = load_incremental_model()
+            current_model_batch1 = load_incremental_model()
             st.write("Current model loaded successfully.")
         
             # 绘制ROC曲线函数
@@ -508,7 +508,7 @@ def prediction_page():
         
                     if 'MRSI' in data.columns: 
                         y_true = data['MRSI'].values 
-                        predictions = current_model.predict_proba(data)[:, 1] 
+                        predictions = current_model_batch1.predict_proba(data)[:, 1] 
                         predictions_df = pd.DataFrame(predictions, columns=['Predictions']) 
                         st.write(predictions)
                         result_data = data.copy() 
@@ -578,9 +578,9 @@ def prediction_page():
                                 new_tree = DecisionTreeClassifier(random_state=42)
                                 new_tree.fit(X, y) 
                                 if isinstance(current_model, DynamicWeightedForest):
-                                    current_model.add_tree(new_tree)
-                                    current_model.update_weights(X, y)
-                                    current_model.save_model('global_weighted_forest_updated.pkl')
+                                    current_model_batch1.add_tree(new_tree)
+                                    current_model_batch1.update_weights(X, y)
+                                    current_model_batch1.save_model('global_weighted_forest_updated.pkl')
                                     st.success("New tree added and weights updated dynamically! Incremental model saved.")
                             else:
                                 st.info("AUC is above 0.78. Incremental learning is not triggered.")
@@ -589,7 +589,7 @@ def prediction_page():
                             st.warning("Not enough samples for ROC curve plotting. Please upload at least 10 samples.") 
         
                     else:                      
-                        predictions = current_model.predict_proba(data)[:, 1] 
+                        predictions = current_model_batch1.predict_proba(data)[:, 1] 
                         predictions = pd.DataFrame(predictions, columns=['Predictions'])
                         st.write(predictions)
                         result_data = data.copy() 
