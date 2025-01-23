@@ -571,22 +571,38 @@ def prediction_page():
                             # 增量学习条件：样本量大于10且AUC低于0.78
                             if roc_auc < 0.78:
                                 st.warning("AUC is below 0.78. Starting incremental learning.")
+                        
+                                # 提取训练模型部分，去除pipeline
+                                model = model2.named_steps['trained_model']
+                        
+                                # 准备增量学习数据
                                 X = data.drop(columns=['MRSI']) 
                                 y = data['MRSI'] 
-        
+                        
                                 # 添加新树并更新权重
                                 new_tree = DecisionTreeClassifier(random_state=42)
-                                new_tree.fit(X, y) 
-                                if isinstance(current_model, DynamicWeightedForest):
-                                    current_model_batch1.add_tree(new_tree)
-                                    current_model_batch1.update_weights(X, y)
-                                    current_model_batch1.save_model('global_weighted_forest_updated.pkl')
-                                    st.success("New tree added and weights updated dynamically! Incremental model saved.")
+                                new_tree.fit(X, y)
+                        
+                                # 如果是DynamicWeightedForest模型
+                                if isinstance(model, RandomForestClassifier):
+                                    model.fit(X, y)  # 直接对模型进行增量学习
+                        
+                                    # 保存模型到 pipeline 中
+                                    model2.named_steps['trained_model'] = model  # 更新pipeline中的训练模型部分
+                                    joblib.dump(model2, 'updated_model_with_pipeline.pkl')  # 保存包含pipeline的更新模型
+                                    st.success("New tree added and weights updated dynamically! Incremental model saved with pipeline.")
+                                elif isinstance(model, DynamicWeightedForest):
+                                    model.add_tree(new_tree)
+                                    model.update_weights(X, y)
+                        
+                                    # 保存增量学习后的模型到 DynamicWeightedForest pipeline
+                                    model2.named_steps['trained_model'] = model  # 更新pipeline中的训练模型部分
+                                    joblib.dump(model2, 'updated_model_with_pipeline.pkl')  # 保存包含pipeline的更新模型
+                                    st.success("New tree added and weights updated dynamically! Incremental model saved with pipeline.")
                             else:
                                 st.info("AUC is above 0.78. Incremental learning is not triggered.")
-        
                         else:
-                            st.warning("Not enough samples for ROC curve plotting. Please upload at least 10 samples.") 
+                            st.warning("Not enough samples for ROC curve plotting. Please upload at least 10 samples.")                           
         
                     else:                      
                         predictions = current_model_batch1.predict_proba(data)[:, 1] 
