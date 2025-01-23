@@ -479,11 +479,21 @@ def prediction_page():
             def save_incremental_model(current_model, pipeline):
                 """保存增量学习后的模型（封装回Pipeline）"""
                 if isinstance(current_model, DynamicWeightedForest):
-                    pipeline.named_steps['trained_model'] = current_model  
-                    joblib.dump(pipeline, 'global_weighted_forest_updated.pkl')  
+                    pipeline.named_steps['trained_model'] = current_model  # 把更新后的模型嵌入到Pipeline
+                    joblib.dump(pipeline, 'global_weighted_forest_updated.pkl')  # 保存为增量学习后的模型
                     st.success("Incremental model saved successfully with the pipeline!")
         
-            # 定义加载完整的Pipeline模型
+            # 加载模型（优先加载增量学习模型，否则加载初始模型）
+            current_model_batch1 = load_incremental_model()
+        
+            if current_model_batch1:
+                st.write("Incremental model loaded successfully.")
+                current_model = current_model_batch1  # 使用增量学习模型
+            else:
+                st.write("Using initial model.")
+                current_model = load_initial_model()  # 使用初始模型
+        
+            # 加载初始模型时，也应该加载Pipeline
             def load_model_with_pipeline():
                 model_file = 'global_weighted_forest_updated.pkl'
                 try:
@@ -494,16 +504,6 @@ def prediction_page():
                 except Exception as e:
                     st.error(f"Failed to load model with pipeline: {e}")
                     return None
-        
-            # 加载当前模型（增量模型或初始模型）
-            current_model_batch1 = load_incremental_model()
-        
-            if current_model_batch1:
-                st.write("Incremental model loaded successfully.")
-                current_model = current_model_batch1  # 使用增量模型
-            else:
-                st.write("Using initial model.")
-                current_model = load_initial_model()  # 使用初始模型
         
             # 绘制ROC曲线函数
             def plot_roc_curve(y_true, y_scores): 
@@ -643,6 +643,8 @@ def prediction_page():
         
                 except Exception as e: 
                     pass
+        
+
 
                     
         elif prediction_type == "Intraoperative_number":
