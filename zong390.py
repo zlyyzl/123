@@ -328,6 +328,14 @@ def prediction_page():
                             current_model.add_tree(new_tree)
                             current_model.update_weights(X, y)
                             current_model.save_model('global_weighted_forest.pkl')
+                            updated_pipeline = Pipeline([
+                                ('preprocessing', current_model_batch1.named_steps['preprocessing']),  # 保持原有的预处理步骤
+                                ('trained_model', pre_weighted_forest2)  # 使用增量学习后的模型
+                            ])
+                            
+                            # 保存增量学习后的模型（包括pipeline）
+                            joblib.dump(updated_pipeline, 'global_weighted_forest_updated.pkl')
+                            st.success("Incremental model saved successfully with the pipeline!")
                             st.success("Model updated successfully with incremental learning!")
                         else:
                             st.info("Initial model AUC is sufficient. Incremental learning is not triggered.")
