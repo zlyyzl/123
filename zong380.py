@@ -572,18 +572,14 @@ def prediction_page():
                             if roc_auc < 0.78:
                                 st.warning("AUC is below 0.78. Starting incremental learning.")
                         
-                                # 提取训练模型部分，去除pipeline
                                 model = model2.named_steps['trained_model']
                         
-                                # 准备增量学习数据
                                 X = data.drop(columns=['MRSI']) 
                                 y = data['MRSI'] 
                         
-                                # 添加新树并更新权重
                                 new_tree = DecisionTreeClassifier(random_state=42)
                                 new_tree.fit(X, y)
-                        
-                                # 如果是DynamicWeightedForest模型
+                 
                                 if isinstance(model, RandomForestClassifier):
                                     model.fit(X, y)  # 直接对模型进行增量学习
                         
