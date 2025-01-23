@@ -455,11 +455,19 @@ def prediction_page():
         
             # 定义加载初始模型的函数
             def load_initial_model():
-                model_file = 'tuned_rf_pre_BUN_model.pkl'  # 初始模型的路径
+                model_file = 'tuned_rf_pre_BUN_model.pkl'  
                 try:
-                    initial_model = joblib.load(model_file)
-                    st.write(f"Initial model loaded successfully: {model_file}")
-                    return DynamicWeightedForest(initial_model.estimators_)
+                    # 加载整个Pipeline
+                    pipeline = joblib.load(model_file)  
+                    
+                    # 如果是Pipeline，提取出训练的模型
+                    if isinstance(pipeline, Pipeline):
+                        trained_model = pipeline.named_steps['trained_model']
+                        st.write("Initial model loaded successfully with pipeline.")
+                        return trained_model
+                    else:
+                        st.error("The model loaded is not a Pipeline!")
+                        return None
                 except Exception as e:
                     st.error(f"Failed to load initial model: {e}")
                     return None
