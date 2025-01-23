@@ -439,8 +439,30 @@ def prediction_page():
             
         elif prediction_type == "Preoperative_batch":
             st.subheader("Preoperative Batch Prediction")
-            
-  
+
+            def incremental_learning(X, y, current_model):
+                """增量学习：剔除pipeline，只使用核心模型"""
+                new_tree = DecisionTreeClassifier(random_state=42)
+                new_tree.fit(X, y)  # 拟合新的树
+                if isinstance(current_model, DynamicWeightedForest):
+                    current_model.add_tree(new_tree)  # 增加新的树
+                    current_model.update_weights(X, y)  # 更新模型的权重
+                    st.success("New tree added and weights updated dynamically!")
+                else:
+                    st.warning("Model is not a DynamicWeightedForest, incremental learning cannot be performed.")
+        
+            # 定义加载初始模型的函数
+            def load_initial_model():
+                model_file = 'tuned_rf_pre_BUN_model.pkl'  
+                try:
+                    initial_model = joblib.load(model_file)
+                    st.write(f"Initial model loaded successfully: {model_file}")
+                    return DynamicWeightedForest(initial_model.estimators_)
+                except Exception as e:
+                    st.error(f"Failed to load initial model: {e}")
+                    return None
+        
+            # 定义加载增量学习模型的函数
             def load_incremental_model():
                 model_file_batch1 = 'global_weighted_forest_updated.pkl'
                 if os.path.exists(model_file_batch1):
@@ -452,25 +474,36 @@ def prediction_page():
                 else:
                     st.info("No incremental model found. Using initial model.")
                     return load_initial_model()
-
-            # 加载初始模型
-            def load_initial_model():
-
-                model_file = 'tuned_rf_pre_BUN_model.pkl'  
+        
+            # 定义保存增量学习模型的函数
+            def save_incremental_model(current_model, pipeline):
+                """保存增量学习后的模型（封装回Pipeline）"""
+                if isinstance(current_model, DynamicWeightedForest):
+                    pipeline.named_steps['trained_model'] = current_model  
+                    joblib.dump(pipeline, 'global_weighted_forest_updated.pkl')  
+                    st.success("Incremental model saved successfully with the pipeline!")
+        
+            # 定义加载完整的Pipeline模型
+            def load_model_with_pipeline():
+                model_file = 'global_weighted_forest_updated.pkl'
                 try:
-                    return joblib.load(model_file)  
+                    # 加载完整的Pipeline
+                    pipeline = joblib.load(model_file)
+                    st.write(f"Model with pipeline loaded: {model_file}")
+                    return pipeline
                 except Exception as e:
-                    st.error(f"Failed to load initial model: {e}")
+                    st.error(f"Failed to load model with pipeline: {e}")
                     return None
-
+        
+            # 加载当前模型（增量模型或初始模型）
             current_model_batch1 = load_incremental_model()
+        
             if current_model_batch1:
                 st.write("Incremental model loaded successfully.")
-                current_model = current_model_batch1  
+                current_model = current_model_batch1  # 使用增量模型
             else:
                 st.write("Using initial model.")
-                current_model = load_initial_model()  
-
+                current_model = load_initial_model()  # 使用初始模型
         
             # 绘制ROC曲线函数
             def plot_roc_curve(y_true, y_scores): 
@@ -525,7 +558,7 @@ def prediction_page():
                         result_data = data.copy() 
                         result_data['Predictions'] = predictions_df 
                         result_file_path = 'predictions_with_results.csv' 
-                        result_data.to_csv(result_file_path, index=False) 
+                        result_data.to_csv(result_file_path, index=False)
         
                         with open(result_file_path, 'rb') as f: 
                             output_data = f.read()
@@ -584,15 +617,10 @@ def prediction_page():
                                 st.warning("AUC is below 0.78. Starting incremental learning.")
                                 X = data.drop(columns=['MRSI']) 
                                 y = data['MRSI'] 
-                                rf_model2 = current_model_batch1.named_steps['trained_model']
-                                pre_weighted_forest2 = DynamicWeightedForest(rf_model2.estimators_) 
-                                # 添加新树并更新权重
-                                new_tree = DecisionTreeClassifier(random_state=42)
-                                new_tree.fit(X, y) 
-                                pre_weighted_forest2.add_tree(new_tree)
-                                pre_weighted_forest2.update_weights(X, y)
-                                pre_weighted_forest2.save_model('global_weighted_forest_updated.pkl')
-                                st.success("New tree added and weights updated dynamically! Incremental model saved.")
+        
+                                incremental_learning(X, y, current_model_batch1)
+        
+                                save_incremental_model(current_model_batch1, model2)
                             else:
                                 st.info("AUC is above 0.78. Incremental learning is not triggered.")
         
