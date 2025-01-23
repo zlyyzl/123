@@ -595,7 +595,7 @@ def prediction_page():
                                         new_tree.fit(X, y) 
                                         pre_weighted_forest2.add_tree(new_tree)
                                         pre_weighted_forest2.update_weights(X, y)
-                                    
+                                        st.success("New tree added and weights updated dynamically!")
                                         # 保存增量学习后的模型（不再需要单独保存模型）
                                         updated_pipeline = Pipeline([
                                             ('preprocessing', current_model_batch1.named_steps['preprocessing']),  # 保持原有的预处理步骤
