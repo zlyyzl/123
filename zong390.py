@@ -333,7 +333,6 @@ def prediction_page():
                                 ('trained_model', pre_weighted_forest2)  # 使用增量学习后的模型
                             ])
                             
-                            # 保存增量学习后的模型（包括pipeline）
                             joblib.dump(updated_pipeline, 'global_weighted_forest_updated.pkl')
                             st.success("Incremental model saved successfully with the pipeline!")
                             st.success("Model updated successfully with incremental learning!")
