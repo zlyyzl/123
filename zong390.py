@@ -22,6 +22,8 @@ import streamlit.components.v1 as components
 import openpyxl
 import os
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import Pipeline
+
 
 class DynamicWeightedForest:
     def __call__(self, X):
