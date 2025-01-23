@@ -548,26 +548,6 @@ def prediction_page():
             else:
                 st.info("AUC is above 0.78. Incremental learning is not triggered.")
 
-        
-                        else:
-                            st.warning("Not enough samples for ROC curve plotting. Please upload at least 10 samples.") 
-        
-                    else:                      
-                        predictions = current_model_batch1.predict_proba(data)[:, 1] 
-                        predictions = pd.DataFrame(predictions, columns=['Predictions'])
-                        st.write(predictions)
-                        result_data = data.copy() 
-                        result_data['Predictions'] = predictions 
-                        result_file_path = 'predictions_with_results.csv'
-                        result_data.to_csv(result_file_path, index=False)
-                        with open(result_file_path, 'rb') as f:
-                            data = f.read()
-                            b64 = base64.b64encode(data).decode('UTF-8')
-                            download_link = f'<a href="data:file/csv;base64,{b64}" download="predictions_with_results.csv">Download predictions with results</a>' 
-                            st.markdown(download_link, unsafe_allow_html=True)
-        
-                except Exception as e: 
-                    pass
 
 
 
