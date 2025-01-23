@@ -455,26 +455,6 @@ def prediction_page():
                 st.success("New tree added and weights updated dynamically!")
                 return pre_weighted_forest2
         
-            # 定义加载初始模型的函数
-            def load_initial_model():
-                model_file = 'tuned_rf_pre_BUN_model.pkl'  
-                try:
-                    # 加载整个Pipeline
-                    pipeline = joblib.load(model_file)  
-                    
-                    # 如果是Pipeline，提取出训练的模型
-                    if isinstance(pipeline, Pipeline):
-                        trained_model = pipeline.named_steps['trained_model']
-                        st.write("Initial model loaded successfully with pipeline.")
-                        return trained_model
-                    else:
-                        st.error("The model loaded is not a Pipeline!")
-                        return None
-                except Exception as e:
-                    st.error(f"Failed to load initial model: {e}")
-                    return None
-        
-            # 定义加载增量学习模型的函数
             def load_incremental_model():
                 model_file_batch1 = 'global_weighted_forest_updated.pkl'
                 if os.path.exists(model_file_batch1):
@@ -486,6 +466,23 @@ def prediction_page():
                 else:
                     st.info("No incremental model found. Using initial model.")
                     return load_initial_model()
+        
+            # 加载初始模型
+            def load_initial_model():
+                model_file = 'tuned_rf_pre_BUN_model.pkl'  
+                try:
+                    pipeline = joblib.load(model_file)  
+                    if isinstance(pipeline, Pipeline):
+                        trained_model = pipeline.named_steps['trained_model']
+                        st.write("Initial model loaded successfully with pipeline.")
+                        return trained_model
+                    else:
+                        st.error("The model loaded is not a Pipeline!")
+                        return None
+                except Exception as e:
+                    st.error(f"Failed to load initial model: {e}")
+                    return None
+
         
             # 定义保存增量学习模型的函数
             def save_incremental_model(current_model, pipeline):
