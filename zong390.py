@@ -588,23 +588,26 @@ def prediction_page():
                                         y = data['MRSI'] 
                                         rf_model2 = current_model_batch1.named_steps['trained_model']
                                         pre_weighted_forest2 = DynamicWeightedForest(rf_model2.estimators_) 
+                                    
                                         # 添加新树并更新权重
                                         new_tree = DecisionTreeClassifier(random_state=42)
                                         new_tree.fit(X, y) 
                                         pre_weighted_forest2.add_tree(new_tree)
                                         pre_weighted_forest2.update_weights(X, y)
-                                        pre_weighted_forest2.save_model('global_weighted_forest_updated.pkl')
+                                    
+                                        # 保存增量学习后的模型（不再需要单独保存模型）
                                         updated_pipeline = Pipeline([
                                             ('preprocessing', current_model_batch1.named_steps['preprocessing']),  # 保持原有的预处理步骤
                                             ('trained_model', pre_weighted_forest2)  # 使用增量学习后的模型
                                         ])
-                                        
+                                    
                                         # 保存增量学习后的模型（包括pipeline）
                                         joblib.dump(updated_pipeline, 'global_weighted_forest_updated.pkl')
                                         st.success("Incremental model saved successfully with the pipeline!")
                                         st.success("New tree added and weights updated dynamically! Incremental model saved.")
                                     else:
                                         st.info("AUC is above 0.78. Incremental learning is not triggered.")
+
                 
                                 else:
                                     st.warning("Not enough samples for ROC curve plotting. Please upload at least 10 samples.") 
