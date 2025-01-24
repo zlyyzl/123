@@ -480,7 +480,7 @@ def prediction_page():
                         current_model = current_model_batch1  # 这里赋值给当前模型
                     else:
                         st.write("Using initial model.")
-                        current_model = load_initial_model()          
+                        current_model = load_initial_model()  
 
                     # 绘制ROC曲线函数
                     def plot_roc_curve(y_true, y_scores): 
