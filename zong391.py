@@ -476,8 +476,8 @@ def prediction_page():
                         except Exception as e:
                             st.error(f"Failed to load initial model: {e}")
                             return None
+                            
                     def save_incremental_model(current_model, pipeline):
-                            """保存增量学习后的模型（封装回Pipeline）"""
                         if isinstance(current_model, DynamicWeightedForest):
                             pipeline.named_steps['trained_model'] = current_model  
                             joblib.dump(pipeline, 'global_weighted_forest_updated.pkl')  
