@@ -591,26 +591,14 @@ def prediction_page():
                                     # 增量学习条件：样本量大于10且AUC低于0.78
                                     if roc_auc < 0.78:
                                         st.warning("AUC is below 0.78. Starting incremental learning.")
-                                        X = data.drop(columns=['MRSI'])
-                                        y = data['MRSI']
-                                        
-                                        # 获取当前模型中的训练模型部分
+                                        X = data.drop(columns=['MRSI']) 
+                                        y = data['MRSI'] 
                                         rf_model2 = current_model_batch1.named_steps['trained_model']
-                                        pre_weighted_forest2 = DynamicWeightedForest(rf_model2.estimators_)
-                                        
-                                        # 打印增量学习前模型的树数量
-                                        st.write(f"Number of trees before incremental learning: {len(pre_weighted_forest2.estimators_)}")
-                                        
-                                        # 添加新树并更新权重
+                                        pre_weighted_forest2 = DynamicWeightedForest(rf_model2.estimators_) 
                                         new_tree = DecisionTreeClassifier(random_state=42)
-                                        new_tree.fit(X, y)
+                                        new_tree.fit(X, y) 
                                         pre_weighted_forest2.add_tree(new_tree)
                                         pre_weighted_forest2.update_weights(X, y)
-                                        
-                                        # 打印增量学习后模型的树数量
-                                        st.write(f"Number of trees after incremental learning: {len(pre_weighted_forest2.estimators_)}")
-                                        
-                                        # 保存增量学习后的模型
                                         pre_weighted_forest2.save_model('global_weighted_forest_updated.pkl')
                                         st.success("New tree added and weights updated dynamically! Incremental model saved.")
                                     else:
