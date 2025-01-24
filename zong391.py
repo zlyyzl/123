@@ -445,15 +445,21 @@ def prediction_page():
                     st.subheader("Preoperative Batch Prediction")  
             
                     def load_initial_model():
-                        model_file = 'tuned_rf_pre_BUN_model.pkl'
+                        model_file = 'tuned_rf_pre_BUN_model.pkl'  # 初始模型的路径
                         try:
                             pipeline = joblib.load(model_file)  # 加载Pipeline
                             st.write(f"Initial model (with pipeline) loaded successfully: {model_file}")
-                            return pipeline  # 返回完整的Pipeline
+                            trained_model = pipeline.named_steps['trained_model']
+                            if isinstance(trained_model, RandomForestClassifier):
+                                st.write("Initial model is a RandomForestClassifier.")
+                                return pipeline, DynamicWeightedForest(trained_model.estimators_)  # 返回Pipeline和动态加权森林
+                            else:
+                                st.warning("Unexpected model type in pipeline. Returning as-is.")
+                                return pipeline, trained_model
                         except Exception as e:
                             st.error(f"Failed to load initial model: {e}")
-                            return None
-                    
+                            return None, None
+                                        
                     # 加载增量学习模型
                     def load_incremental_model():
                         model_file_batch1 = 'global_weighted_forest_updated.pkl'
@@ -461,11 +467,11 @@ def prediction_page():
                         if os.path.exists(model_file_batch1):
                             try:
                                 pipeline = joblib.load(model_file_batch1)  # 加载Pipeline
-                                pre_weighted_forest2 = pipeline.named_steps['trained_model']  # 提取核心模型
-                                if isinstance(pre_weighted_forest2, DynamicWeightedForest):
+                                trained_model = pipeline.named_steps['trained_model']
+                                if isinstance(trained_model, DynamicWeightedForest):
                                     st.write("Incremental model loaded successfully.")
-                                    st.write(f"Number of trees in incremental model: {len(pre_weighted_forest2.estimators_)}")
-                                    return pipeline  # 返回完整的Pipeline
+                                    st.write(f"Number of trees in incremental model: {len(trained_model.estimators_)}")
+                                    return pipeline, trained_model  # 返回Pipeline和动态加权森林
                                 else:
                                     st.warning("Loaded model is not a DynamicWeightedForest. Falling back to initial model.")
                                     return load_initial_model()
@@ -478,26 +484,32 @@ def prediction_page():
                     
                     # 增量学习函数
                     def incremental_learning(X, y, current_model):
-                        """执行增量学习"""
-                        if isinstance(current_model.named_steps['trained_model'], DynamicWeightedForest):
-                            dynamic_forest = current_model.named_steps['trained_model']  # 提取DynamicWeightedForest
+                        """增量学习：在动态加权森林中添加新树并更新权重"""
+                        if isinstance(current_model, DynamicWeightedForest):
                             new_tree = DecisionTreeClassifier(random_state=42)
-                            new_tree.fit(X, y)  # 拟合新的树
-                            dynamic_forest.add_tree(new_tree)
-                            dynamic_forest.update_weights(X, y)
+                            new_tree.fit(X, y)
+                            current_model.add_tree(new_tree)  # 添加新树
+                            current_model.update_weights(X, y)  # 更新权重
                             st.success("New tree added and weights updated dynamically!")
                         else:
-                            st.error("Current model's trained_model is not a DynamicWeightedForest. Incremental learning cannot be performed.")
+                            st.error("Current model is not a DynamicWeightedForest. Incremental learning cannot be performed.")
                     
                     # 保存增量学习后的模型
-                    def save_incremental_model(current_model):
-                        """保存增量学习后的模型，封装回Pipeline"""
-                        if isinstance(current_model.named_steps['trained_model'], DynamicWeightedForest):
-                            joblib.dump(current_model, 'global_weighted_forest_updated.pkl')
-                            st.success("Incremental model saved successfully!")
+                    def save_incremental_model(current_model, pipeline):
+                        """保存增量学习后的模型（封装回Pipeline）"""
+                        if isinstance(current_model, DynamicWeightedForest):
+                            pipeline.named_steps['trained_model'] = current_model  # 将增量模型重新封装进Pipeline
+                            joblib.dump(pipeline, 'global_weighted_forest_updated.pkl')  # 保存Pipeline
+                            st.success("Incremental model saved successfully with the pipeline!")
                     
                     # 加载模型
-                    current_model_pipeline = load_incremental_model()
+                    pipeline, current_model_batch1 = load_incremental_model()
+
+                    # 检查是否加载成功
+                    if current_model_batch1:
+                        st.write("Current model loaded successfully.")
+                    else:
+                        st.error("Failed to load any model. Please check your model files.")
 
                     # 绘制ROC曲线函数
                     def plot_roc_curve(y_true, y_scores): 
@@ -608,11 +620,15 @@ def prediction_page():
                                     # 增量学习条件：样本量大于10且AUC低于0.78
                                     if roc_auc < 0.78:
                                         st.warning("AUC is below 0.78. Starting incremental learning.")
-                                        X = data.drop(columns=['MRSI']) 
-                                        y = data['MRSI'] 
-                    
-                                        incremental_learning(X, y, current_model_pipeline)
-                                        save_incremental_model(current_model_pipeline)
+                                        X = data.drop(columns=['MRSI'])
+                                        y = data['MRSI']
+                                        
+                                        # 确保 current_model_batch1 是动态加权森林
+                                        if isinstance(current_model_batch1, DynamicWeightedForest):
+                                            incremental_learning(X, y, current_model_batch1)  # 执行增量学习
+                                            save_incremental_model(current_model_batch1, pipeline)  # 保存增量学习后的模型
+                                        else:
+                                            st.error("Current model is not a DynamicWeightedForest. Incremental learning cannot be performed.")
                                     else:
                                         st.info("AUC is above 0.78. Incremental learning is not triggered.")
                                 else:
