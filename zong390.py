@@ -571,38 +571,38 @@ def prediction_page():
                 
                                 # 计算性能指标
                                 if len(data) >= 10:
-                                y_pred = (predictions > 0.5).astype(int)
-                                accuracy = accuracy_score(y_true, y_pred)
-                                recall = recall_score(y_true, y_pred)
-                                precision = precision_score(y_true, y_pred)
-                                f1 = f1_score(y_true, y_pred)
-                                roc_auc = auc(*roc_curve(y_true, predictions)[:2])
-                            
-                                st.write(f"Accuracy: {accuracy:.2f}")
-                                st.write(f"Recall: {recall:.2f}")
-                                st.write(f"Precision: {precision:.2f}")
-                                st.write(f"F1 Score: {f1:.2f}")
-                                st.write(f"AUC: {roc_auc:.2f}")
-                                brier_score = brier_score_loss(y_true, predictions)
-                                st.write(f"Brier Score: {brier_score:.2f}")
-                            
-                                plot_combined_graphs(y_true, predictions)
-                            
-                                # 增量学习条件：样本量大于10且AUC低于0.78
-                                if roc_auc < 0.78:
-                                    st.warning("AUC is below 0.78. Starting incremental learning.")
-                                    X = data.drop(columns=['MRSI'])  # 使用所有数据进行训练
-                                    y = data['MRSI']  # 标签
-                                    rf_model2 = current_model_batch1.named_steps['trained_model']
-                                    pre_weighted_forest2 = DynamicWeightedForest(rf_model2.estimators_)
-                                    new_tree = DecisionTreeClassifier(random_state=42)
-                                    new_tree.fit(X, y)  # 使用整个数据集训练新树
-                                    pre_weighted_forest2.add_tree(new_tree)  # 添加新树
-                                    pre_weighted_forest2.update_weights(X, y)  # 更新权重
-                                    pre_weighted_forest2.save_model('global_weighted_forest_updated.pkl')
-                                    st.success("New tree added and weights updated dynamically! Incremental model saved.")
-                                else:
-                                    st.info("AUC is above 0.78. Incremental learning is not triggered.")
+                                    y_pred = (predictions > 0.5).astype(int)
+                                    accuracy = accuracy_score(y_true, y_pred)
+                                    recall = recall_score(y_true, y_pred)
+                                    precision = precision_score(y_true, y_pred)
+                                    f1 = f1_score(y_true, y_pred)
+                                    roc_auc = auc(*roc_curve(y_true, predictions)[:2])
+                                
+                                    st.write(f"Accuracy: {accuracy:.2f}")
+                                    st.write(f"Recall: {recall:.2f}")
+                                    st.write(f"Precision: {precision:.2f}")
+                                    st.write(f"F1 Score: {f1:.2f}")
+                                    st.write(f"AUC: {roc_auc:.2f}")
+                                    brier_score = brier_score_loss(y_true, predictions)
+                                    st.write(f"Brier Score: {brier_score:.2f}")
+                                
+                                    plot_combined_graphs(y_true, predictions)
+                                
+                                    # 增量学习条件：样本量大于10且AUC低于0.78
+                                    if roc_auc < 0.78:
+                                        st.warning("AUC is below 0.78. Starting incremental learning.")
+                                        X = data.drop(columns=['MRSI'])  # 使用所有数据进行训练
+                                        y = data['MRSI']  # 标签
+                                        rf_model2 = current_model_batch1.named_steps['trained_model']
+                                        pre_weighted_forest2 = DynamicWeightedForest(rf_model2.estimators_)
+                                        new_tree = DecisionTreeClassifier(random_state=42)
+                                        new_tree.fit(X, y)  # 使用整个数据集训练新树
+                                        pre_weighted_forest2.add_tree(new_tree)  # 添加新树
+                                        pre_weighted_forest2.update_weights(X, y)  # 更新权重
+                                        pre_weighted_forest2.save_model('global_weighted_forest_updated.pkl')
+                                        st.success("New tree added and weights updated dynamically! Incremental model saved.")
+                                    else:
+                                        st.info("AUC is above 0.78. Incremental learning is not triggered.")
 
 
                 
