@@ -455,6 +455,7 @@ def prediction_page():
                                 pipeline = joblib.load('tuned_rf_pre_BUN_model.pkl')
                                 
                                 pipeline.named_steps['trained_model'] = pre_weighted_forest2
+                                st.write(f"Number of trees in incremental model: {len(pre_weighted_forest2.estimators_)}")
                                 
                                 return pipeline
                             except Exception as e:
