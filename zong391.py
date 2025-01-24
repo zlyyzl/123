@@ -617,8 +617,7 @@ def prediction_page():
                                         st.info("AUC is above 0.78. Incremental learning is not triggered.")
                                 else:
                                     st.warning("Not enough samples for ROC curve plotting. Please upload at least 10 samples.") 
-                        except Exception as e:
-                            st.error(f"Error during prediction or learning: {e}")
+
                 
                             else:                      
                                 predictions = current_model_pipeline.predict_proba(data)[:, 1] 
