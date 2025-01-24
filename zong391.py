@@ -299,7 +299,7 @@ def prediction_page():
                 except Exception as e:
                     st.error(f"Failed to load the model: {e}")
                     return None
-        
+            
             # 加载或定义当前模型
             current_model = load_global_model()
 
