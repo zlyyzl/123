@@ -442,46 +442,46 @@ def prediction_page():
             
             
         elif prediction_type == "Preoperative_batch":
-                    st.subheader("Preoperative Batch Prediction")                 
-          
+                    st.subheader("Preoperative Batch Prediction")  
+            
                     def load_incremental_model():
-                            model_file_batch1 = 'global_weighted_forest_updated.pkl'
-                            
-                            if os.path.exists(model_file_batch1):
-                                try:
-                                    pre_weighted_forest2 = joblib.load(model_file_batch1)
-                                    st.write("Incremental model loaded successfully.")
-                                    
-                                    pipeline = joblib.load('tuned_rf_pre_BUN_model.pkl')
-                                    pipeline.named_steps['trained_model'] = pre_weighted_forest2
-                                    
-                                    return pipeline
-                                except Exception as e:
-                                    st.warning(f"Failed to load incremental model: {e}. Falling back to initial model.")
-                                    return load_initial_model()
-                            else:
-                                st.info("No incremental model found. Using initial model.")
-                                return load_initial_model()
-                    
-                        # 加载初始模型
-                        def load_initial_model():
-                            model_file = 'tuned_rf_pre_BUN_model.pkl'  
+                        model_file_batch1 = 'global_weighted_forest_updated.pkl'
+                        
+                        if os.path.exists(model_file_batch1):
                             try:
-                                return joblib.load(model_file)  
+                                pre_weighted_forest2 = joblib.load(model_file_batch1)
+                                st.write("Incremental model loaded successfully.")
+                                
+                                pipeline = joblib.load('tuned_rf_pre_BUN_model.pkl')
+                                pipeline.named_steps['trained_model'] = pre_weighted_forest2
+                                
+                                return pipeline
                             except Exception as e:
-                                st.error(f"Failed to load initial model: {e}")
-                                return None
-                    
-                        # 正确加载模型
-                        current_model_batch1 = load_incremental_model()
-                        
-                        if current_model_batch1:
-                            st.write("Incremental model loaded successfully.")
-                            current_model = current_model_batch1  # 这里赋值给当前模型
+                                st.warning(f"Failed to load incremental model: {e}. Falling back to initial model.")
+                                return load_initial_model()
                         else:
-                            st.write("Using initial model.")
-                            current_model = load_initial_model()
-                        
+                            st.info("No incremental model found. Using initial model.")
+                            return load_initial_model()
+                
+                    # 加载初始模型
+                    def load_initial_model():
+                        model_file = 'tuned_rf_pre_BUN_model.pkl'  
+                        try:
+                            return joblib.load(model_file)  
+                        except Exception as e:
+                            st.error(f"Failed to load initial model: {e}")
+                            return None
+                
+                    # 正确加载模型
+                    current_model_batch1 = load_incremental_model()
+                    
+                    if current_model_batch1:
+                        st.write("Incremental model loaded successfully.")
+                        current_model = current_model_batch1  # 这里赋值给当前模型
+                    else:
+                        st.write("Using initial model.")
+                        current_model = load_initial_model()          
+
                     # 绘制ROC曲线函数
                     def plot_roc_curve(y_true, y_scores): 
                         fpr, tpr, thresholds = roc_curve(y_true, y_scores) 
