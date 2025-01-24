@@ -599,11 +599,14 @@ def prediction_page():
                                         new_tree.fit(X, y)  # 使用整个数据集训练新树
                                         pre_weighted_forest2.add_tree(new_tree)  # 添加新树
                                         pre_weighted_forest2.update_weights(X, y)  # 更新权重
+                                    
+                                        # 打印新树和权重，检查增量学习的变化
+                                        st.write(f"Number of trees after addition: {len(pre_weighted_forest2.estimators_)}")
+                                    
                                         pre_weighted_forest2.save_model('global_weighted_forest_updated.pkl')
                                         st.success("New tree added and weights updated dynamically! Incremental model saved.")
                                     else:
                                         st.info("AUC is above 0.78. Incremental learning is not triggered.")
-
 
                 
                                 else:
