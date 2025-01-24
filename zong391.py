@@ -589,21 +589,30 @@ def prediction_page():
                                     plot_combined_graphs(y_true, predictions)
                                 
                                     # 增量学习条件：样本量大于10且AUC低于0.78
+                                    import time
+                                    
                                     if roc_auc < 0.78:
                                         st.warning("AUC is below 0.78. Starting incremental learning.")
                                         X = data.drop(columns=['MRSI'])  # 使用所有数据进行训练
                                         y = data['MRSI']  # 标签
                                         rf_model2 = current_model_batch1.named_steps['trained_model']
                                         pre_weighted_forest2 = DynamicWeightedForest(rf_model2.estimators_)
+                                    
+                                        # 训练新树
+                                        start_time = time.time()
                                         new_tree = DecisionTreeClassifier(random_state=42)
                                         new_tree.fit(X, y)  # 使用整个数据集训练新树
+                                        st.write(f"New tree training time: {time.time() - start_time:.2f} seconds")
+                                    
                                         pre_weighted_forest2.add_tree(new_tree)  # 添加新树
                                         pre_weighted_forest2.update_weights(X, y)  # 更新权重
+                                        st.write(f"Model update time: {time.time() - start_time:.2f} seconds")
                                     
-                                        # 打印新树和权重，检查增量学习的变化
-                                        st.write(f"Number of trees after addition: {len(pre_weighted_forest2.estimators_)}")
-                                    
+                                        # 保存增量模型
+                                        start_time = time.time()
                                         pre_weighted_forest2.save_model('global_weighted_forest_updated.pkl')
+                                        st.write(f"Model save time: {time.time() - start_time:.2f} seconds")
+                                    
                                         st.success("New tree added and weights updated dynamically! Incremental model saved.")
                                     else:
                                         st.info("AUC is above 0.78. Incremental learning is not triggered.")
