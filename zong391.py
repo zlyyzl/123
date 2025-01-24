@@ -589,8 +589,6 @@ def prediction_page():
                                     plot_combined_graphs(y_true, predictions)
                                 
                                     # 增量学习条件：样本量大于10且AUC低于0.78
-                                    import time
-                                    
                                     if roc_auc < 0.78:
                                         st.warning("AUC is below 0.78. Starting incremental learning.")
                                         X = data.drop(columns=['MRSI'])
@@ -616,13 +614,12 @@ def prediction_page():
                                     else:
                                         st.info("AUC is above 0.78. Incremental learning is not triggered.")
 
-
                 
                                 else:
                                     st.warning("Not enough samples for ROC curve plotting. Please upload at least 10 samples.") 
                 
                             else:                      
-                                predictions = current_model_batch1.predict_proba(data)[:, 1] 
+                                predictions = current_model.predict_proba(data)[:, 1] 
                                 predictions = pd.DataFrame(predictions, columns=['Predictions'])
                                 st.write(predictions)
                                 result_data = data.copy() 
