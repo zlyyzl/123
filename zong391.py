@@ -544,7 +544,7 @@ def prediction_page():
                 
                             if 'MRSI' in data.columns: 
                                 y_true = data['MRSI'].values 
-                                predictions = current_model.predict_proba(data)[:, 1] 
+                                predictions = current_model_pipeline.predict_proba(data)[:, 1] 
                                 predictions_df = pd.DataFrame(predictions, columns=['Predictions']) 
                                 st.write(predictions)
                                 result_data = data.copy() 
