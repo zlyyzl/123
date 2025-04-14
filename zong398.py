@@ -146,7 +146,7 @@ def prediction_page():
         if os.path.exists(pdf_file_path):
             st.markdown("Click here to download the manual for more detailed usage instructions:")
             with open(pdf_file_path, "rb") as f:
-                st.download_button(label="User Manual.pdf",data=f, file_name="User Manual.pdf",mime="application/pdf" )
+                st.download_button(label="User Manual1.pdf",data=f, file_name="User Manual.pdf",mime="application/pdf" )
         else:
             st.error("指定的文件不存在，请检查文件路径。")
         
