@@ -1,0 +1,26 @@
+# .github/workflows/wake_streamlit.yml
+name: Wake Streamlit Apps
+
+on:
+    schedule:
+        - cron: "0 */8 * * *"  # 每8小时运行一次
+    workflow_dispatch:  # 允许手动触发
+
+jobs:
+    wake-apps:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.9"
+
+            - name: Install dependencies
+              run: |
+                  pip install requests
+
+            - name: Run wake script
+              run: python wake_streamlit.py
