@@ -341,7 +341,7 @@ def prediction_page():
                     
                         st.write(f'Based on feature values, predicted possibility of good functional outcome is {probability}')
                         # Visualize SHAP values using force plot
-                        st_shap(shap.force_plot(expected_value, shap_values, input_array))
+                        st_shap(shap.force_plot(expected_value, shap_values, input_df))
                         shap_values_flat = shap_values.flatten()
                         shap_df = pd.DataFrame({'Feature': input_df.columns, 'SHAP Value': shap_values_flat})
                         st.write("SHAP values for each feature:")
@@ -641,7 +641,7 @@ def prediction_page():
             
                         # 展示 SHAP 力图
                         st.write("SHAP Force Plot:")
-                        st_shap(shap.force_plot(expected_value, shap_values, input_array_intra))
+                        st_shap(shap.force_plot(expected_value, shap_values, input_df_intra))
             
                         # 展示每个特征的 SHAP 值
                         shap_df = pd.DataFrame({
@@ -947,7 +947,7 @@ def prediction_page():
             
                         # 展示 SHAP 力图
                         st.write("SHAP Force Plot:")
-                        st_shap(shap.force_plot(expected_value, shap_values, input_array_post))
+                        st_shap(shap.force_plot(expected_value, shap_values, input_df_post))
             
                         # 展示每个特征的 SHAP 值
                         shap_df = pd.DataFrame({
